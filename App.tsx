@@ -2016,7 +2016,7 @@ const styles = StyleSheet.create({
   },
   roleChoiceActive: {
     borderColor: TOKENS.primary,
-    backgroundColor: '#ECFDF3',
+    backgroundColor: '#ECFDF7',
   },
   roleChoiceText: {
     color: TOKENS.text,
@@ -2024,7 +2024,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   roleChoiceTextActive: {
-    color: '#0F5132',
+    color: '#155E75',
   },
   inputWrap: {
     gap: 6,
@@ -2587,13 +2587,13 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
   },
   statusSuccess: {
-    backgroundColor: '#EAF8EE',
+    backgroundColor: '#D1FAE5',
   },
   statusWarning: {
-    backgroundColor: '#FFF6E0',
+    backgroundColor: '#FEF3C7',
   },
   statusError: {
-    backgroundColor: '#FDEBEC',
+    backgroundColor: '#FEE2E2',
   },
   statusText: {
     color: TOKENS.text,
