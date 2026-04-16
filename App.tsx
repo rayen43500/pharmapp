@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -88,6 +89,15 @@ type NavTab = {
   label: string;
   icon: string;
 };
+
+type NotificationItem = {
+  id: string;
+  text: string;
+  read: boolean;
+  createdAt: number;
+};
+
+type PatientTab = 'home' | 'search' | 'cart' | 'orders' | 'profile' | 'detail';
 
 const STORAGE_KEY = 'medimirville_ui_charter_v1';
 const DEMO_ALL_FEATURES_ENABLED = true;
@@ -428,6 +438,8 @@ export default function App() {
   const { width } = useWindowDimensions();
   const isDesktop = width >= 1024;
 
+  const detailImageWidth = Math.max(250, Math.min(isDesktop ? 420 : width - 64, 520));
+
   const [booting, setBooting] = useState(true);
   const [authStep, setAuthStep] = useState<AuthStep>('role');
   const [showGoogle, setShowGoogle] = useState(false);
@@ -439,10 +451,34 @@ export default function App() {
   const [loginPassword, setLoginPassword] = useState('');
   const [registerData, setRegisterData] = useState<Record<string, string>>({});
 
-  const [products] = useState<Product[]>(PRODUCTS);
+  const [products, setProducts] = useState<Product[]>(PRODUCTS);
   const [orders, setOrders] = useState<Order[]>(INITIAL_ORDERS);
   const [cart, setCart] = useState<Array<{ productId: string; qty: number }>>([]);
-  const [notifications, setNotifications] = useState<string[]>([]);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [stockLevels, setStockLevels] = useState<Record<string, number>>({
+    p1: 42,
+    p2: 18,
+    p3: 30,
+    p4: 0,
+  });
+  const [stockSearch, setStockSearch] = useState('');
+  const [stockLowOnly, setStockLowOnly] = useState(false);
+  const [stockCreateOpen, setStockCreateOpen] = useState(false);
+  const [stockCreateData, setStockCreateData] = useState<{
+    name: string;
+    brand: string;
+    price: string;
+    qty: string;
+    image: string;
+    category: 'medicament' | 'parapharmacie';
+  }>({
+    name: '',
+    brand: '',
+    price: '',
+    qty: '0',
+    image: '',
+    category: 'medicament',
+  });
 
   const [globalSearch, setGlobalSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<'all' | 'medicines' | 'supplements' | 'devices' | 'care'>('all');
@@ -455,7 +491,7 @@ export default function App() {
   const [secureCode, setSecureCode] = useState('');
   const [generatedCode, setGeneratedCode] = useState('');
 
-  const [patientTab, setPatientTab] = useState('home');
+  const [patientTab, setPatientTab] = useState<PatientTab>('home');
   const [pharmacienTab, setPharmacienTab] = useState('dashboard');
   const [livreurTab, setLivreurTab] = useState('dashboard');
   const [adminTab, setAdminTab] = useState('dashboard');
@@ -465,6 +501,9 @@ export default function App() {
   const [rppsVerified, setRppsVerified] = useState(DEMO_ALL_FEATURES_ENABLED);
   const [consentGiven, setConsentGiven] = useState(DEMO_ALL_FEATURES_ENABLED);
   const [soundNotifEnabled, setSoundNotifEnabled] = useState(true);
+  const [notifPushEnabled, setNotifPushEnabled] = useState(true);
+  const [notifEmailEnabled, setNotifEmailEnabled] = useState(true);
+  const [notifSmsEnabled, setNotifSmsEnabled] = useState(false);
   const [auditLogs, setAuditLogs] = useState<string[]>([
     'RGPD: journalisation active',
     'Securite: acces admin strictement controle',
@@ -475,6 +514,8 @@ export default function App() {
   ]);
 
   const [chatOpen, setChatOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [notifFilter, setNotifFilter] = useState<'all' | 'unread' | 'read'>('all');
   const [chatInput, setChatInput] = useState('');
   const [chatMessages, setChatMessages] = useState<string[]>([
     'Assistant: Bonjour, je peux vous aider pour vos commandes.',
@@ -539,7 +580,15 @@ export default function App() {
     }
 
     const t = setTimeout(() => {
-      setNotifications((prev) => [`Nouvelle notif pour ${ROLE_LABELS[user.role]}`, ...prev].slice(0, 4));
+      setNotifications((prev) => [
+        {
+          id: `n-${Date.now()}-${Math.random()}`,
+          text: `Nouvelle notif pour ${ROLE_LABELS[user.role]}`,
+          read: false,
+          createdAt: Date.now(),
+        },
+        ...prev,
+      ].slice(0, 24));
     }, 5000);
 
     return () => clearTimeout(t);
@@ -597,9 +646,91 @@ export default function App() {
     [selectedAdminUserId]
   );
 
+  const unreadNotificationsCount = useMemo(
+    () => notifications.filter((n) => !n.read).length,
+    [notifications]
+  );
+
+  const filteredNotifications = useMemo(() => {
+    if (notifFilter === 'unread') {
+      return notifications.filter((n) => !n.read);
+    }
+    if (notifFilter === 'read') {
+      return notifications.filter((n) => n.read);
+    }
+    return notifications;
+  }, [notifications, notifFilter]);
+
   const pushNotif = (text: string) => {
     const suffix = soundNotifEnabled ? ' | BIP' : '';
-    setNotifications((prev) => [`${text}${suffix}`, ...prev].slice(0, 4));
+    setNotifications((prev) => [
+      {
+        id: `n-${Date.now()}-${Math.random()}`,
+        text: `${text}${suffix}`,
+        read: false,
+        createdAt: Date.now(),
+      },
+      ...prev,
+    ].slice(0, 24));
+  };
+
+  const markNotificationRead = (id: string) => {
+    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
+  };
+
+  const removeNotification = (id: string) => {
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+  };
+
+  const markAllNotificationsRead = () => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+  };
+
+  const adjustStock = (productId: string, delta: number) => {
+    setStockLevels((prev) => {
+      const current = prev[productId] ?? 0;
+      const next = Math.max(0, current + delta);
+      return { ...prev, [productId]: next };
+    });
+  };
+
+  const createStockProduct = () => {
+    const name = stockCreateData.name.trim();
+    const brand = stockCreateData.brand.trim();
+    const parsedPrice = Number(stockCreateData.price);
+    const parsedQty = Math.max(0, Math.floor(Number(stockCreateData.qty)));
+
+    if (!name || !brand || Number.isNaN(parsedPrice)) {
+      Alert.alert('Produit invalide', 'Renseignez au minimum nom, marque et prix valides.');
+      return;
+    }
+
+    const id = `p${Date.now()}`;
+    const newProduct: Product = {
+      id,
+      name,
+      brand,
+      rating: 4.5,
+      reviews: 0,
+      packSizes: ['Standard'],
+      category: stockCreateData.category,
+      price: parsedPrice,
+      available: parsedQty > 0,
+      image: stockCreateData.image.trim() || 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&w=600&q=80',
+    };
+
+    setProducts((prev) => [newProduct, ...prev]);
+    setStockLevels((prev) => ({ ...prev, [id]: parsedQty }));
+    setStockCreateOpen(false);
+    setStockCreateData({
+      name: '',
+      brand: '',
+      price: '',
+      qty: '0',
+      image: '',
+      category: 'medicament',
+    });
+    pushNotif(`Nouveau produit ajoute au stock: ${name}`);
   };
 
   const pushAudit = (text: string) => {
@@ -652,7 +783,7 @@ export default function App() {
     setSelectedProductId(product.id);
     setSelectedPackSize(product.packSizes[0] ?? 'Standard');
     setDetailQty(1);
-    setPatientTab('orders');
+    setPatientTab('detail');
   };
 
   const updateQty = (productId: string, qty: number) => {
@@ -850,18 +981,6 @@ export default function App() {
     setAdminTab(key);
   };
 
-  const switchRoleDemo = (role: Role) => {
-    if (!user) {
-      return;
-    }
-    setUser({ ...user, role });
-    setPatientTab('home');
-    setPharmacienTab('dashboard');
-    setLivreurTab('dashboard');
-    setAdminTab('dashboard');
-    pushNotif(`Mode ${ROLE_LABELS[role]} actif`);
-  };
-
   const sendChat = () => {
     if (!chatInput.trim()) {
       return;
@@ -1027,21 +1146,30 @@ export default function App() {
         <View style={styles.logoMini}><Text style={styles.logoMiniText}>M</Text></View>
       </View>
       <View style={styles.topCenterSearch}>
-        {user?.role === 'patient' ? (
+        {user?.role === 'patient' && patientTab !== 'detail' ? (
           <SearchBar value={globalSearch} onChangeText={setGlobalSearch} placeholder="Search products" />
         ) : (
-          <Text style={styles.topTitle}>{ROLE_LABELS[user?.role ?? 'patient']}</Text>
+          <Text style={styles.topTitle}>{user?.role === 'patient' && patientTab === 'detail' ? 'Product Detail' : ROLE_LABELS[user?.role ?? 'patient']}</Text>
         )}
       </View>
       <View style={styles.topRightIcons}>
-        <Pressable style={styles.topIconCircle} onPress={() => setPatientTab('cart')}>
-          <Text style={styles.topIconText}>C</Text>
-          <View style={styles.topCountBadge}><Text style={styles.topCountText}>{cart.reduce((sum, item) => sum + item.qty, 0)}</Text></View>
+        {user?.role === 'patient' && (
+          <Pressable style={styles.topIconCircle} onPress={() => setPatientTab('cart')}>
+            <Text style={styles.topIconText}>C</Text>
+            <View style={styles.topCountBadge}><Text style={styles.topCountText}>{cart.reduce((sum, item) => sum + item.qty, 0)}</Text></View>
+          </Pressable>
+        )}
+        <View style={styles.topIconCircle}>
+          <Text style={styles.topIconText}>{(user?.name ?? 'U').slice(0, 1).toUpperCase()}</Text>
+        </View>
+        <Pressable style={styles.topIconCircle} onPress={() => setNotificationsOpen(true)}>
+          <MaterialCommunityIcons name="bell-outline" size={16} color={TOKENS.secondary} />
+          <View style={styles.topCountBadge}><Text style={styles.topCountText}>{unreadNotificationsCount}</Text></View>
         </Pressable>
-        <Pressable style={styles.topIconCircle} onPress={() => setPatientTab('profile')}>
-          <Text style={styles.topIconText}>U</Text>
+        <Pressable style={styles.topLogoutBtn} onPress={logout}>
+          <MaterialCommunityIcons name="logout" size={14} color="#FFFFFF" />
+          <Text style={styles.topLogoutText}>Logout</Text>
         </Pressable>
-        <Animated.View style={[styles.redDot, { transform: [{ scale: pulse }] }]} />
       </View>
     </View>
   );
@@ -1052,28 +1180,16 @@ export default function App() {
         <View style={styles.desktopBrandIcon}><Text style={styles.desktopBrandIconText}>Px</Text></View>
         <Text style={styles.desktopBrandTitle}>PharmaLiv</Text>
       </View>
-      <View style={styles.rolePillsRow}>
-        {(['pharmacien', 'livreur', 'patient', 'admin'] as Role[]).map((role) => {
-          const active = user?.role === role;
-          return (
-            <Pressable
-              key={role}
-              onPress={() => switchRoleDemo(role)}
-              style={[styles.rolePill, active && styles.rolePillActive]}
-            >
-              <Text style={[styles.rolePillText, active && styles.rolePillTextActive]}>{ROLE_LABELS[role]}</Text>
-            </Pressable>
-          );
-        })}
-      </View>
       <View style={styles.desktopHeaderRight}>
         <SearchBar value={globalSearch} onChangeText={setGlobalSearch} placeholder="Rechercher" />
-        <Pressable style={styles.headerCartPill} onPress={() => setPatientTab('cart')}>
-          <Text style={styles.headerCartPillText}>Cart {cart.reduce((sum, item) => sum + item.qty, 0)}</Text>
+        {user?.role === 'patient' && (
+          <Pressable style={styles.headerCartPill} onPress={() => setPatientTab('cart')}>
+            <Text style={styles.headerCartPillText}>Cart {cart.reduce((sum, item) => sum + item.qty, 0)}</Text>
+          </Pressable>
+        )}
+        <Pressable style={styles.notificationBadge} onPress={() => setNotificationsOpen(true)}>
+          <Text style={styles.notificationBadgeText}>{unreadNotificationsCount}</Text>
         </Pressable>
-        <View style={styles.notificationBadge}>
-          <Text style={styles.notificationBadgeText}>{notifications.length}</Text>
-        </View>
         <View style={styles.profilePill}>
           <Text style={styles.profilePillText}>{(user?.name ?? 'U').slice(0, 2).toUpperCase()}</Text>
         </View>
@@ -1196,16 +1312,19 @@ export default function App() {
             />
           </View>
           {filteredProducts.map((p) => (
-            <View key={p.id} style={styles.orderCard}>
-              <View style={{ flex: 1 }}>
+            <View key={p.id} style={styles.catalogCard}>
+              <Image source={{ uri: p.image }} style={styles.catalogImage} />
+              <View style={styles.catalogContent}>
                 <Text style={styles.orderTitle}>{p.name}</Text>
                 <Text style={styles.caption}>{p.brand}</Text>
                 <Text style={styles.body}>* {p.rating.toFixed(1)} ({p.reviews})</Text>
                 <Text style={styles.productPrice}>{money(p.price)}</Text>
                 <StatusBadge label={p.available ? 'Disponible' : 'Indisponible'} type={p.available ? 'success' : 'error'} />
               </View>
-              <AppButton title="View" onPress={() => openProductDetail(p)} variant="secondary" full={false} />
-              <AppButton title="Add" onPress={() => addToCart(p.id)} full={false} disabled={!p.available} />
+              <View style={styles.catalogActions}>
+                <AppButton title="View" onPress={() => openProductDetail(p)} variant="secondary" full={false} />
+                <AppButton title="Add" onPress={() => addToCart(p.id)} full={false} disabled={!p.available} />
+              </View>
             </View>
           ))}
         </View>
@@ -1267,6 +1386,45 @@ export default function App() {
     }
 
     if (patientTab === 'orders') {
+      const order = orders[0];
+      return (
+        <>
+          <View style={styles.card}>
+            <Text style={styles.h2}>Tracking commande</Text>
+            <Stepper status={order?.status ?? 'En attente'} />
+            <FakeMap eta={order?.eta ?? '30 min'} status={order?.status ?? 'En attente'} />
+            <Text style={styles.caption}>Suivi GPS temps reel + photos</Text>
+            <View style={styles.miniProductsRow}>
+              {products.slice(0, 3).map((product) => (
+                <Image key={`trk-${product.id}`} source={{ uri: product.image }} style={styles.miniProductThumb} />
+              ))}
+            </View>
+          </View>
+
+          <View style={styles.card}>
+            <Text style={styles.h2}>Mes commandes</Text>
+            {orders.slice(0, 4).map((o) => (
+              <View key={`order-${o.id}`} style={styles.orderCard}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.orderTitle}>{o.id}</Text>
+                  <Text style={styles.caption}>ETA {o.eta} - Distance {o.distance}</Text>
+                </View>
+                <StatusBadge label={o.status} type={badgeType(o.status)} />
+              </View>
+            ))}
+          </View>
+
+          <View style={styles.card}>
+            <Text style={styles.h2}>Code securise</Text>
+            <Text style={styles.caption}>Entrer code fourni par pharmacien</Text>
+            <InputField label="Code" value={secureCode} onChangeText={setSecureCode} placeholder="******" />
+            <AppButton title="Verifier code" onPress={verifyCode} />
+          </View>
+        </>
+      );
+    }
+
+    if (patientTab === 'detail') {
       if (!selectedProduct) {
         return (
           <View style={styles.card}>
@@ -1302,7 +1460,7 @@ export default function App() {
               scrollEventThrottle={16}
             >
               {productGallery.map((img) => (
-                <Image key={img} source={{ uri: img }} style={styles.detailHeroImage} />
+                <Image key={img} source={{ uri: img }} style={[styles.detailHeroImage, { width: detailImageWidth }]} />
               ))}
             </ScrollView>
             <View style={styles.dotRow}>
@@ -1365,37 +1523,157 @@ export default function App() {
     }
 
     return (
-      <View style={styles.card}>
-        <Text style={styles.h2}>Profil</Text>
-        <Text style={styles.body}>Nom: {user?.name}</Text>
-        <Text style={styles.body}>Email: {user?.email}</Text>
-        <Text style={styles.body}>Telephone: {user?.phone ?? 'Non renseigne'}</Text>
-        <AppButton title="Modifier infos" onPress={() => Alert.alert('Info', 'Edition profil fake')} variant="secondary" />
-        <Text style={styles.h2}>Assistance</Text>
-        <View style={styles.rowWrap}>
-          <AppButton
-            title="Par AI"
-            onPress={() => {
-              setChatOpen(true);
-              pushNotif('Assistance AI ouverte');
-            }}
-            full={false}
-          />
-          <AppButton
-            title="Par email"
-            onPress={() => Alert.alert('Support', 'support@medimirville.app (fake)')}
-            variant="secondary"
-            full={false}
-          />
-        </View>
-        <Text style={styles.h2}>Historique commandes</Text>
-        {orders.slice(0, 3).map((o) => (
-          <View key={o.id} style={styles.orderCard}>
-            <Text style={styles.orderTitle}>{o.id}</Text>
-            <StatusBadge label={o.status} type={badgeType(o.status)} />
+      <>
+        <View style={styles.card}>
+          <View style={styles.profileHero}>
+            <View style={styles.profileAvatarLg}>
+              <Text style={styles.profileAvatarLgText}>{(user?.name ?? 'U').slice(0, 2).toUpperCase()}</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.h2}>Profil</Text>
+              <Text style={styles.caption}>Patient / Professionnel</Text>
+            </View>
+            <StatusBadge label="Compte actif" type="success" />
           </View>
-        ))}
-      </View>
+
+          <View style={styles.detailPanel}>
+            <Text style={styles.body}>Nom: {user?.name}</Text>
+            <Text style={styles.body}>Email: {user?.email}</Text>
+            <Text style={styles.body}>Telephone: {user?.phone ?? 'Non renseigne'}</Text>
+          </View>
+
+          <View style={styles.quickOptionGrid}>
+            <Pressable style={styles.quickOptionCard} onPress={() => Alert.alert('Adresses', 'Gestion des adresses (fake)')}>
+              <View style={styles.quickOptionHead}>
+                <View style={styles.quickOptionIconWrap}>
+                  <MaterialCommunityIcons name="map-marker-outline" size={18} color={TOKENS.secondary} />
+                </View>
+                <Text style={styles.quickOptionTitle}>Mes adresses</Text>
+              </View>
+              <Text style={styles.caption}>2 adresses enregistrees</Text>
+            </Pressable>
+            <Pressable style={styles.quickOptionCard} onPress={() => Alert.alert('Paiement', 'Cartes et wallet (fake)')}>
+              <View style={styles.quickOptionHead}>
+                <View style={styles.quickOptionIconWrap}>
+                  <MaterialCommunityIcons name="credit-card-outline" size={18} color={TOKENS.secondary} />
+                </View>
+                <Text style={styles.quickOptionTitle}>Paiement</Text>
+              </View>
+              <Text style={styles.caption}>CB + Wallet</Text>
+            </Pressable>
+            <Pressable style={styles.quickOptionCard} onPress={() => Alert.alert('Notifications', 'Parametres notifications (fake)')}>
+              <View style={styles.quickOptionHead}>
+                <View style={styles.quickOptionIconWrap}>
+                  <MaterialCommunityIcons name="bell-outline" size={18} color={TOKENS.secondary} />
+                </View>
+                <Text style={styles.quickOptionTitle}>Notifications</Text>
+              </View>
+              <Text style={styles.caption}>Push, email, son</Text>
+            </Pressable>
+            <Pressable style={styles.quickOptionCard} onPress={() => Alert.alert('Securite', 'Mot de passe et biometrie (fake)')}>
+              <View style={styles.quickOptionHead}>
+                <View style={styles.quickOptionIconWrap}>
+                  <MaterialCommunityIcons name="shield-check-outline" size={18} color={TOKENS.secondary} />
+                </View>
+                <Text style={styles.quickOptionTitle}>Securite</Text>
+              </View>
+              <Text style={styles.caption}>Biometrie activee</Text>
+            </Pressable>
+          </View>
+
+          <View style={styles.detailPanel}>
+            <Text style={styles.h2}>Parametres de notification</Text>
+
+            <Pressable style={styles.switchRow} onPress={() => setNotifPushEnabled((v) => !v)}>
+              <View style={styles.switchLabelWrap}>
+                <MaterialCommunityIcons name="cellphone-message" size={18} color={TOKENS.secondary} />
+                <Text style={styles.body}>Push</Text>
+              </View>
+              <View style={[styles.switchTrack, notifPushEnabled && styles.switchTrackOn]}>
+                <View style={[styles.switchThumb, notifPushEnabled && styles.switchThumbOn]} />
+              </View>
+            </Pressable>
+
+            <Pressable style={styles.switchRow} onPress={() => setNotifEmailEnabled((v) => !v)}>
+              <View style={styles.switchLabelWrap}>
+                <MaterialCommunityIcons name="email-outline" size={18} color={TOKENS.secondary} />
+                <Text style={styles.body}>Email</Text>
+              </View>
+              <View style={[styles.switchTrack, notifEmailEnabled && styles.switchTrackOn]}>
+                <View style={[styles.switchThumb, notifEmailEnabled && styles.switchThumbOn]} />
+              </View>
+            </Pressable>
+
+            <Pressable style={styles.switchRow} onPress={() => setNotifSmsEnabled((v) => !v)}>
+              <View style={styles.switchLabelWrap}>
+                <MaterialCommunityIcons name="message-text-outline" size={18} color={TOKENS.secondary} />
+                <Text style={styles.body}>SMS</Text>
+              </View>
+              <View style={[styles.switchTrack, notifSmsEnabled && styles.switchTrackOn]}>
+                <View style={[styles.switchThumb, notifSmsEnabled && styles.switchThumbOn]} />
+              </View>
+            </Pressable>
+          </View>
+
+          <View style={styles.loyaltyCard}>
+            <View style={styles.loyaltyTopRow}>
+              <View>
+                <Text style={styles.h2}>Fidelite</Text>
+                <Text style={styles.caption}>Niveau Gold</Text>
+              </View>
+              <View style={styles.loyaltyBadge}>
+                <MaterialCommunityIcons name="star-circle" size={18} color="#0B4EA2" />
+                <Text style={styles.loyaltyBadgeText}>1,250 pts</Text>
+              </View>
+            </View>
+            <View style={styles.loyaltyProgressBg}>
+              <View style={styles.loyaltyProgressFill} />
+            </View>
+            <Text style={styles.caption}>750 pts restants pour niveau Platinum</Text>
+            <View style={styles.rowWrap}>
+              <StatusBadge label="Livraison offerte" type="success" />
+              <StatusBadge label="Promo -10%" type="warning" />
+              <StatusBadge label="Acces prioritaire" type="success" />
+            </View>
+          </View>
+
+          <AppButton title="Modifier infos" onPress={() => Alert.alert('Info', 'Edition profil fake')} variant="secondary" />
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.h2}>Assistance</Text>
+          <View style={styles.rowWrap}>
+            <AppButton
+              title="Par AI"
+              onPress={() => {
+                setChatOpen(true);
+                pushNotif('Assistance AI ouverte');
+              }}
+              full={false}
+            />
+            <AppButton
+              title="Par email"
+              onPress={() => Alert.alert('Support', 'support@medimirville.app (fake)')}
+              variant="secondary"
+              full={false}
+            />
+          </View>
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.h2}>Historique commandes</Text>
+          {orders.slice(0, 3).map((o) => (
+            <View key={o.id} style={styles.orderCard}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.orderTitle}>{o.id}</Text>
+                <Text style={styles.caption}>ETA {o.eta} - Distance {o.distance}</Text>
+              </View>
+              <StatusBadge label={o.status} type={badgeType(o.status)} />
+              <AppButton title="Suivre" onPress={() => setPatientTab('orders')} variant="secondary" full={false} />
+            </View>
+          ))}
+        </View>
+      </>
     );
   };
 
@@ -1407,7 +1685,7 @@ export default function App() {
           <View style={styles.statsGrid}>
             <View style={styles.statCard}><Text style={styles.statValue}>{orders.length}</Text><Text style={styles.caption}>Commandes recues</Text></View>
             <View style={styles.statCard}><Text style={styles.statValue}>{orders.filter((o) => o.status === 'Validee').length}</Text><Text style={styles.caption}>Validees</Text></View>
-            <View style={styles.statCard}><Text style={styles.statValue}>{notifications.length}</Text><Text style={styles.caption}>Notifications</Text></View>
+            <View style={styles.statCard}><Text style={styles.statValue}>{unreadNotificationsCount}</Text><Text style={styles.caption}>Notifications non lues</Text></View>
           </View>
           <View style={styles.detailPanel}>
             <Text style={styles.caption}>Notifications sonores et visuelles</Text>
@@ -1428,25 +1706,43 @@ export default function App() {
     if (pharmacienTab === 'commandes') {
       return (
         <View style={styles.card}>
-          <Text style={styles.h2}>Commandes</Text>
+          <View style={styles.sectionHeaderRow}>
+            <View style={styles.sectionHeaderLeft}>
+              <MaterialCommunityIcons name="clipboard-list-outline" size={18} color={TOKENS.secondary} />
+              <Text style={styles.h2}>Commandes</Text>
+            </View>
+            <StatusBadge label={`${orders.length} total`} type="success" />
+          </View>
+
           {orders.map((o) => (
-            <View key={o.id} style={styles.orderCard}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.orderTitle}>{o.id} - {o.patientName}</Text>
-                <Text style={styles.caption}>Ordonnance: {o.ordonnance}</Text>
-                <Text style={styles.caption}>Verification documentaire requise</Text>
+            <View key={o.id} style={styles.pharmOrderCard}>
+              <View style={styles.pharmOrderTop}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.orderTitle}>{o.id} - {o.patientName}</Text>
+                  <View style={styles.pharmMetaRow}>
+                    <MaterialCommunityIcons name="file-document-outline" size={14} color="#627283" />
+                    <Text style={styles.caption}>Ordonnance: {o.ordonnance}</Text>
+                  </View>
+                  <View style={styles.pharmMetaRow}>
+                    <MaterialCommunityIcons name="shield-check-outline" size={14} color="#627283" />
+                    <Text style={styles.caption}>Verification documentaire requise</Text>
+                  </View>
+                </View>
+                <StatusBadge label={o.status} type={badgeType(o.status)} />
               </View>
-              <StatusBadge label={o.status} type={badgeType(o.status)} />
-              <AppButton
-                title="Valider"
-                onPress={() => {
-                  changeOrder(o.id, 'Validee');
-                  assignNearestCourier(o.id);
-                }}
-                full={false}
-              />
-              <AppButton title="Refuser" onPress={() => changeOrder(o.id, 'Annulee')} variant="danger" full={false} />
-              <AppButton title="Detail" onPress={() => setSelectedOrderId(o.id)} variant="secondary" full={false} />
+
+              <View style={styles.pharmActionsRow}>
+                <AppButton
+                  title="Valider"
+                  onPress={() => {
+                    changeOrder(o.id, 'Validee');
+                    assignNearestCourier(o.id);
+                  }}
+                  full={false}
+                />
+                <AppButton title="Refuser" onPress={() => changeOrder(o.id, 'Annulee')} variant="danger" full={false} />
+                <AppButton title="Detail" onPress={() => setSelectedOrderId(o.id)} variant="secondary" full={false} />
+              </View>
             </View>
           ))}
 
@@ -1495,8 +1791,11 @@ export default function App() {
             </View>
           )}
 
-          <View style={styles.detailPanel}>
-            <Text style={styles.h2}>Tracking livraison</Text>
+          <View style={styles.trackingCard}>
+            <View style={styles.sectionHeaderLeft}>
+              <MaterialCommunityIcons name="truck-delivery-outline" size={18} color={TOKENS.secondary} />
+              <Text style={styles.h2}>Tracking livraison</Text>
+            </View>
             <FakeMap eta={selectedOrder?.eta ?? '20 min'} status={selectedOrder?.status ?? 'En attente'} />
           </View>
         </View>
@@ -1504,52 +1803,298 @@ export default function App() {
     }
 
     if (pharmacienTab === 'stock') {
+      const stockRows = products
+        .map((p) => ({
+          product: p,
+          qty: stockLevels[p.id] ?? 0,
+        }))
+        .filter((row) => row.product.name.toLowerCase().includes(stockSearch.toLowerCase()))
+        .filter((row) => (stockLowOnly ? row.qty <= 10 : true));
+
+      const totalUnits = Object.values(stockLevels).reduce((sum, qty) => sum + qty, 0);
+      const lowCount = Object.values(stockLevels).filter((qty) => qty > 0 && qty <= 10).length;
+      const ruptureCount = Object.values(stockLevels).filter((qty) => qty === 0).length;
+
       return (
+        <>
         <View style={styles.card}>
-          <Text style={styles.h2}>Stock</Text>
-          {products.map((p) => (
-            <View key={p.id} style={styles.orderCard}>
-              <Text style={styles.orderTitle}>{p.name}</Text>
-              <StatusBadge label={p.available ? 'Disponible' : 'Rupture'} type={p.available ? 'success' : 'error'} />
+          <View style={styles.sectionHeaderRow}>
+            <View style={styles.sectionHeaderLeft}>
+              <MaterialCommunityIcons name="warehouse" size={18} color={TOKENS.secondary} />
+              <Text style={styles.h2}>Gestion de stock</Text>
+            </View>
+            <StatusBadge label={`${stockRows.length} produits`} type="success" />
+          </View>
+
+          <View style={styles.statsGrid}>
+            <View style={styles.statCard}><Text style={styles.statValue}>{totalUnits}</Text><Text style={styles.caption}>Unites totales</Text></View>
+            <View style={styles.statCard}><Text style={styles.statValue}>{lowCount}</Text><Text style={styles.caption}>Stock faible</Text></View>
+            <View style={styles.statCard}><Text style={styles.statValue}>{ruptureCount}</Text><Text style={styles.caption}>Ruptures</Text></View>
+          </View>
+
+          <View style={styles.rowWrap}>
+            <AppButton title="Ajouter produit" onPress={() => setStockCreateOpen(true)} full={false} />
+            <StatusBadge label="Ajout manuel actif" type="warning" />
+          </View>
+
+          <SearchBar value={stockSearch} onChangeText={setStockSearch} placeholder="Rechercher un produit" />
+          <View style={styles.rowWrap}>
+            <AppButton
+              title={stockLowOnly ? 'Stock faible: ON' : 'Stock faible: OFF'}
+              onPress={() => setStockLowOnly((v) => !v)}
+              variant={stockLowOnly ? 'primary' : 'secondary'}
+              full={false}
+            />
+            <AppButton
+              title="Reappro auto (+5)"
+              onPress={() => {
+                stockRows.forEach((row) => {
+                  if (row.qty <= 5) {
+                    adjustStock(row.product.id, 5);
+                  }
+                });
+                pushNotif('Reapprovisionnement automatique effectue');
+              }}
+              full={false}
+            />
+          </View>
+
+          {stockRows.map((row) => (
+            <View key={row.product.id} style={styles.stockRowCard}>
+              <Image source={{ uri: row.product.image }} style={styles.stockRowImage} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.orderTitle}>{row.product.name}</Text>
+                <Text style={styles.caption}>{row.product.brand}</Text>
+                <View style={styles.rowWrap}>
+                  <StatusBadge
+                    label={row.qty > 0 ? 'Disponible' : 'Rupture'}
+                    type={row.qty > 0 ? 'success' : 'error'}
+                  />
+                  {row.qty > 0 && row.qty <= 10 && <StatusBadge label="Stock faible" type="warning" />}
+                </View>
+              </View>
+
+              <View style={styles.stockQtyWrap}>
+                <Text style={styles.caption}>Quantite</Text>
+                <Text style={styles.stockQtyText}>{row.qty}</Text>
+                <View style={styles.stockActionsRow}>
+                  <Pressable style={styles.stockActionBtn} onPress={() => adjustStock(row.product.id, -1)}>
+                    <Text style={styles.stockActionText}>-</Text>
+                  </Pressable>
+                  <Pressable style={styles.stockActionBtn} onPress={() => adjustStock(row.product.id, 1)}>
+                    <Text style={styles.stockActionText}>+</Text>
+                  </Pressable>
+                </View>
+              </View>
             </View>
           ))}
         </View>
+        <Modal visible={stockCreateOpen} transparent animationType="fade" onRequestClose={() => setStockCreateOpen(false)}>
+          <View style={styles.modalOverlay}>
+            <View style={styles.stockCreatePanel}>
+              <Text style={styles.h2}>Ajouter un produit</Text>
+              <InputField label="Nom" value={stockCreateData.name} onChangeText={(v) => setStockCreateData((p) => ({ ...p, name: v }))} placeholder="Ex: Spray nasal" />
+              <InputField label="Marque" value={stockCreateData.brand} onChangeText={(v) => setStockCreateData((p) => ({ ...p, brand: v }))} placeholder="Ex: HealthLab" />
+              <View style={styles.rowWrap}>
+                <View style={styles.stockCreateFieldHalf}>
+                  <InputField label="Prix" value={stockCreateData.price} onChangeText={(v) => setStockCreateData((p) => ({ ...p, price: v }))} placeholder="0.00" />
+                </View>
+                <View style={styles.stockCreateFieldHalf}>
+                  <InputField label="Quantite" value={stockCreateData.qty} onChangeText={(v) => setStockCreateData((p) => ({ ...p, qty: v }))} placeholder="0" />
+                </View>
+              </View>
+              <InputField label="Image URL" value={stockCreateData.image} onChangeText={(v) => setStockCreateData((p) => ({ ...p, image: v }))} placeholder="https://..." />
+              <View style={styles.rowWrap}>
+                <AppButton
+                  title={stockCreateData.category === 'medicament' ? 'Categorie: Medicament' : 'Categorie: Parapharmacie'}
+                  onPress={() =>
+                    setStockCreateData((p) => ({ ...p, category: p.category === 'medicament' ? 'parapharmacie' : 'medicament' }))
+                  }
+                  variant="secondary"
+                  full={false}
+                />
+              </View>
+              <View style={styles.rowWrap}>
+                <AppButton title="Creer" onPress={createStockProduct} full={false} />
+                <AppButton title="Annuler" onPress={() => setStockCreateOpen(false)} variant="secondary" full={false} />
+              </View>
+            </View>
+          </View>
+        </Modal>
+        </>
       );
     }
 
     return (
-      <View style={styles.card}>
-        <Text style={styles.h2}>Profil pharmacie</Text>
-        <Text style={styles.body}>Nom: Pharmacie Centrale</Text>
-        <Text style={styles.body}>RPPS: 12345678901</Text>
-        <Text style={styles.body}>Adresse: 12 Avenue Sante</Text>
-      </View>
+      <>
+        <View style={styles.card}>
+          <View style={styles.pharmacyProfileHero}>
+            <View style={styles.pharmacyAvatar}>
+              <MaterialCommunityIcons name="pharmacy" size={22} color={TOKENS.secondary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.h2}>Profil pharmacie</Text>
+              <Text style={styles.caption}>Pharmacie Centrale</Text>
+            </View>
+            <StatusBadge label="Compte verifie" type="success" />
+          </View>
+
+          <View style={styles.pharmacyInfoGrid}>
+            <View style={styles.pharmacyInfoCard}>
+              <Text style={styles.caption}>Nom</Text>
+              <Text style={styles.body}>Pharmacie Centrale</Text>
+            </View>
+            <View style={styles.pharmacyInfoCard}>
+              <Text style={styles.caption}>RPPS</Text>
+              <Text style={styles.body}>12345678901</Text>
+            </View>
+            <View style={styles.pharmacyInfoCard}>
+              <Text style={styles.caption}>Adresse</Text>
+              <Text style={styles.body}>12 Avenue Sante</Text>
+            </View>
+            <View style={styles.pharmacyInfoCard}>
+              <Text style={styles.caption}>Contact</Text>
+              <Text style={styles.body}>+212 5 22 11 22 33</Text>
+            </View>
+          </View>
+
+          <View style={styles.sectionHeaderLeft}>
+            <MaterialCommunityIcons name="clock-outline" size={18} color={TOKENS.secondary} />
+            <Text style={styles.h2}>Horaires</Text>
+          </View>
+          <View style={styles.detailPanel}>
+            <View style={styles.checkRow}><Text style={styles.body}>Lun - Ven</Text><Text style={styles.checkOk}>08:30 - 20:00</Text></View>
+            <View style={styles.checkRow}><Text style={styles.body}>Samedi</Text><Text style={styles.checkOk}>09:00 - 18:00</Text></View>
+            <View style={styles.checkRow}><Text style={styles.body}>Dimanche</Text><Text style={styles.caption}>Garde / Ferme</Text></View>
+          </View>
+
+          <View style={styles.sectionHeaderLeft}>
+            <MaterialCommunityIcons name="toolbox-outline" size={18} color={TOKENS.secondary} />
+            <Text style={styles.h2}>Services</Text>
+          </View>
+          <View style={styles.rowWrap}>
+            <StatusBadge label="Ordonnances" type="success" />
+            <StatusBadge label="Parapharmacie" type="warning" />
+            <StatusBadge label="Livraison express" type="success" />
+            <StatusBadge label="Conseil pharma" type="warning" />
+          </View>
+
+          <View style={styles.rowWrap}>
+            <AppButton title="Modifier profil" onPress={() => Alert.alert('Profil', 'Edition profil pharmacie (fake)')} variant="secondary" full={false} />
+            <AppButton title="Mettre a jour horaires" onPress={() => Alert.alert('Horaires', 'Mise a jour des horaires (fake)')} full={false} />
+          </View>
+        </View>
+
+        <View style={styles.pharmacyComplianceCard}>
+          <View style={styles.sectionHeaderLeft}>
+            <MaterialCommunityIcons name="shield-check-outline" size={18} color={TOKENS.secondary} />
+            <Text style={styles.h2}>Securite et conformite</Text>
+          </View>
+          <View style={styles.infoRow}><MaterialCommunityIcons name="check-circle-outline" size={16} color={TOKENS.success} /><Text style={styles.body}>RGPD: consentement explicite et traitement conforme</Text></View>
+          <View style={styles.infoRow}><MaterialCommunityIcons name="check-circle-outline" size={16} color={TOKENS.success} /><Text style={styles.body}>Chiffrement donnees sensibles (mode demo)</Text></View>
+          <View style={styles.infoRow}><MaterialCommunityIcons name="check-circle-outline" size={16} color={TOKENS.success} /><Text style={styles.body}>Authentification avec acces differencie par profil</Text></View>
+          <View style={styles.infoRow}><MaterialCommunityIcons name="check-circle-outline" size={16} color={TOKENS.success} /><Text style={styles.body}>Validation pharmacien obligatoire avant livraison</Text></View>
+          <View style={styles.infoRow}><MaterialCommunityIcons name="check-circle-outline" size={16} color={TOKENS.success} /><Text style={styles.body}>Code boitier a usage unique genere par algorithme</Text></View>
+          <View style={styles.infoRow}><MaterialCommunityIcons name="check-circle-outline" size={16} color={TOKENS.success} /><Text style={styles.body}>Acces admin journalise et strictement controle</Text></View>
+        </View>
+      </>
     );
   };
 
   const livreurScreen = () => {
+    const currentCourierAccount = ADMIN_USERS.find((u) => u.role === 'livreur' && u.name === 'Ahmed');
+    const isDriverAccountActive = currentCourierAccount?.status === 'Actif';
+    const driverValidationSteps = [
+      { label: 'Verification identite', done: true },
+      { label: 'Entretien recrutement', done: true },
+      { label: 'Formation pharma securite', done: true },
+      { label: 'Documents', done: true },
+      { label: 'Statut legal', done: true },
+      { label: 'Validation admin finale', done: isDriverAccountActive },
+    ];
+    const driverCompletedSteps = driverValidationSteps.filter((s) => s.done).length;
+    const driverProgress = Math.round((driverCompletedSteps / driverValidationSteps.length) * 100);
+    const deliveryAvailableOrders = orders.filter(
+      (o) => o.status === 'Validee' || (o.status === 'En attente' && !!o.courierName)
+    );
+
     if (livreurTab === 'dashboard') {
       return (
         <View style={styles.card}>
           <Text style={styles.h2}>Dashboard livreur</Text>
           <Text style={styles.body}>Livreur: Ahmed</Text>
-          <StatusBadge label="Compte suspendu jusqu'a validation" type="warning" />
-          <Text style={styles.body}>Commandes disponibles: {orders.filter((o) => o.status === 'Validee').length}</Text>
+          <StatusBadge
+            label={
+              isDriverAccountActive
+                ? 'Compte actif'
+                : driverCompletedSteps === driverValidationSteps.length - 1
+                ? 'Dossier complet - validation admin en attente'
+                : 'Compte suspendu jusqu\'a validation'
+            }
+            type={isDriverAccountActive ? 'success' : 'warning'}
+          />
+          <Text style={styles.body}>Commandes disponibles: {isDriverAccountActive ? deliveryAvailableOrders.length : 0}</Text>
+
+          <View style={styles.driverProgressWrap}>
+            <View style={styles.driverProgressBarBg}>
+              <View style={[styles.driverProgressBarFill, { width: `${driverProgress}%` }]} />
+            </View>
+            <Text style={styles.caption}>Progression validation: {driverCompletedSteps}/{driverValidationSteps.length} ({driverProgress}%)</Text>
+          </View>
+
           <View style={styles.detailPanel}>
             <Text style={styles.caption}>Validation obligatoire</Text>
-            <Text style={styles.body}>- Entretien recrutement</Text>
-            <Text style={styles.body}>- Formation pharma securite</Text>
-            <Text style={styles.body}>- Statut auto-entrepreneur verifie</Text>
+            {driverValidationSteps.map((step) => (
+              <View key={`dash-${step.label}`} style={styles.checkRow}>
+                <Text style={styles.body}>{step.label}</Text>
+                <Text style={step.done ? styles.checkOk : styles.caption}>{step.done ? 'OK' : 'En attente'}</Text>
+              </View>
+            ))}
+            {!isDriverAccountActive && (
+              <View style={styles.rowWrap}>
+                <AppButton title="Voir profil" onPress={() => setLivreurTab('profile')} variant="secondary" full={false} />
+                <AppButton title="Demander activation" onPress={() => Alert.alert('Activation', 'Dossier transmis a l\'administration (mode demo).')} full={false} />
+              </View>
+            )}
           </View>
         </View>
       );
     }
 
     if (livreurTab === 'livraisons') {
+      const deliveryRows = orders
+        .filter((o) => o.status !== 'Annulee')
+        .sort((a, b) => {
+          const rank = (status: OrderStatus) =>
+            status === 'En livraison' ? 0 : status === 'Validee' ? 1 : status === 'En attente' ? 2 : 3;
+          return rank(a.status) - rank(b.status);
+        });
+
       return (
         <View style={styles.card}>
           <Text style={styles.h2}>Liste commandes</Text>
-          {orders.filter((o) => o.status !== 'Annulee').map((o) => (
+          {!isDriverAccountActive && (
+            <View style={styles.detailPanel}>
+              <StatusBadge label="Actions bloquees: compte suspendu" type="warning" />
+              <Text style={styles.caption}>Finalisez la validation du compte pour accepter et livrer des commandes.</Text>
+              <View style={styles.rowWrap}>
+                <AppButton title="Voir profil" onPress={() => setLivreurTab('profile')} variant="secondary" full={false} />
+                <AppButton title="Demander activation" onPress={() => Alert.alert('Activation', 'Demande envoyee a l\'administration (mode demo).')} full={false} />
+              </View>
+            </View>
+          )}
+
+          {deliveryRows.length === 0 && (
+            <View style={styles.detailPanel}>
+              <Text style={styles.caption}>Aucune commande disponible actuellement.</Text>
+            </View>
+          )}
+
+          {deliveryRows.map((o) => {
+              const canPickup = isDriverAccountActive && (o.status === 'Validee' || (o.status === 'En attente' && !!o.courierName));
+              const canDrop = isDriverAccountActive && o.status === 'En livraison';
+
+              return (
             <View key={o.id} style={styles.orderCard}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.orderTitle}>{o.id}</Text>
@@ -1557,26 +2102,36 @@ export default function App() {
                 <Text style={styles.caption}>Prix livraison {money(o.deliveryPrice)}</Text>
                 <Text style={styles.caption}>ETA {o.eta}</Text>
                 <Text style={styles.caption}>Photos produits disponibles dans detail</Text>
+                <View style={styles.rowWrap}>
+                  <StatusBadge label={o.status} type={badgeType(o.status)} />
+                  {!isDriverAccountActive && <StatusBadge label="Activation requise" type="warning" />}
+                </View>
               </View>
-              <AppButton title="Detail" onPress={() => setSelectedOrderId(o.id)} variant="secondary" full={false} />
-              <AppButton
-                title="Confirmer recuperation"
-                onPress={() => {
-                  changeOrder(o.id, 'En livraison');
-                  pushNotif(`Recuperation confirmee: ${o.id}`);
-                }}
-                full={false}
-              />
-              <AppButton
-                title="Confirmer depot"
-                onPress={() => {
-                  changeOrder(o.id, 'Livree');
-                  pushNotif(`Depot confirme: ${o.id}`);
-                }}
-                full={false}
-              />
+
+              <View style={styles.pharmActionsRow}>
+                <AppButton title="Detail" onPress={() => setSelectedOrderId(o.id)} variant="secondary" full={false} />
+                <AppButton
+                  title="Confirmer recuperation"
+                  onPress={() => {
+                    changeOrder(o.id, 'En livraison');
+                    pushNotif(`Recuperation confirmee: ${o.id}`);
+                  }}
+                  disabled={!canPickup}
+                  full={false}
+                />
+                <AppButton
+                  title="Confirmer depot"
+                  onPress={() => {
+                    changeOrder(o.id, 'Livree');
+                    pushNotif(`Depot confirme: ${o.id}`);
+                  }}
+                  disabled={!canDrop}
+                  full={false}
+                />
+              </View>
             </View>
-          ))}
+              );
+            })}
 
           {selectedOrder && (
             <View style={styles.detailPanel}>
@@ -1597,44 +2152,203 @@ export default function App() {
     }
 
     if (livreurTab === 'navigation') {
+      const navOrder =
+        selectedOrder ??
+        orders.find((o) => o.status === 'En livraison') ??
+        orders.find((o) => o.status === 'Validee') ??
+        orders[0];
+
+      const navCanPickup = isDriverAccountActive && !!navOrder && (navOrder.status === 'Validee' || (navOrder.status === 'En attente' && !!navOrder.courierName));
+      const navCanDrop = isDriverAccountActive && !!navOrder && navOrder.status === 'En livraison';
+
       return (
-        <View style={styles.card}>
-          <Text style={styles.h2}>Navigation GPS fake</Text>
-          <FakeMap eta="17 min" status="En livraison" />
-        </View>
+        <>
+          <View style={styles.card}>
+            <View style={styles.sectionHeaderRow}>
+              <View style={styles.sectionHeaderLeft}>
+                <MaterialCommunityIcons name="navigation-variant-outline" size={18} color={TOKENS.secondary} />
+                <Text style={styles.h2}>Navigation mission</Text>
+              </View>
+              {!!navOrder && <StatusBadge label={navOrder.status} type={badgeType(navOrder.status)} />}
+            </View>
+
+            {!navOrder && <Text style={styles.caption}>Aucune commande active pour la navigation.</Text>}
+
+            {!!navOrder && (
+              <>
+                <View style={styles.driverNavMetaCard}>
+                  <Text style={styles.orderTitle}>{navOrder.id} - {navOrder.patientName}</Text>
+                  <Text style={styles.caption}>Pharmacie: Pharmacie Centrale, 12 Avenue Sante</Text>
+                  <Text style={styles.caption}>Client: Adresse patient securisee (mode demo)</Text>
+                  <View style={styles.rowWrap}>
+                    <StatusBadge label={`ETA ${navOrder.eta}`} type="warning" />
+                    <StatusBadge label={navOrder.distance} type="success" />
+                    <StatusBadge label={money(navOrder.deliveryPrice)} type="success" />
+                  </View>
+                </View>
+
+                <FakeMap eta={navOrder.eta} status={navOrder.status} />
+
+                <View style={styles.driverNavStepsCard}>
+                  <Text style={styles.caption}>Etapes de mission</Text>
+                  <View style={styles.checkRow}>
+                    <Text style={styles.body}>1. Aller a la pharmacie</Text>
+                    <StatusBadge label={navOrder.pickupConfirmed ? 'Termine' : 'En cours'} type={navOrder.pickupConfirmed ? 'success' : 'warning'} />
+                  </View>
+                  <View style={styles.checkRow}>
+                    <Text style={styles.body}>2. Recuperer le colis</Text>
+                    <StatusBadge label={navOrder.pickupConfirmed ? 'Confirme' : 'A faire'} type={navOrder.pickupConfirmed ? 'success' : 'warning'} />
+                  </View>
+                  <View style={styles.checkRow}>
+                    <Text style={styles.body}>3. Livrer le patient</Text>
+                    <StatusBadge label={navOrder.deliveredConfirmed ? 'Confirme' : 'En attente'} type={navOrder.deliveredConfirmed ? 'success' : 'warning'} />
+                  </View>
+                </View>
+
+                <View style={styles.rowWrap}>
+                  <AppButton
+                    title="Arrive pharmacie"
+                    onPress={() => {
+                      changeOrder(navOrder.id, 'En livraison');
+                      setSelectedOrderId(navOrder.id);
+                      pushNotif(`Arrivee pharmacie: ${navOrder.id}`);
+                    }}
+                    disabled={!navCanPickup}
+                    full={false}
+                  />
+                  <AppButton
+                    title="Confirmer livraison"
+                    onPress={() => {
+                      changeOrder(navOrder.id, 'Livree');
+                      setSelectedOrderId(navOrder.id);
+                      pushNotif(`Livraison confirmee: ${navOrder.id}`);
+                    }}
+                    disabled={!navCanDrop}
+                    full={false}
+                  />
+                </View>
+              </>
+            )}
+          </View>
+        </>
       );
     }
 
     return (
-      <View style={styles.card}>
-        <Text style={styles.h2}>Verification compte</Text>
-        <StatusBadge label="En attente validation" type="warning" />
-        <View style={styles.checkRow}><Text style={styles.body}>Verification identite</Text><Text style={styles.checkOk}>OK</Text></View>
-        <View style={styles.checkRow}><Text style={styles.body}>Entretien recrutement</Text><Text style={styles.checkOk}>OK</Text></View>
-        <View style={styles.checkRow}><Text style={styles.body}>Formation</Text><Text style={styles.checkOk}>OK</Text></View>
-        <View style={styles.checkRow}><Text style={styles.body}>Documents</Text><Text style={styles.checkOk}>OK</Text></View>
-        <View style={styles.checkRow}><Text style={styles.body}>Statut legal</Text><Text style={styles.checkOk}>OK</Text></View>
-      </View>
+      <>
+        <View style={styles.card}>
+          <View style={styles.driverProfileHero}>
+            <View style={styles.driverAvatarLg}>
+              <MaterialCommunityIcons name="motorbike" size={24} color={TOKENS.secondary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.h2}>Profil livreur</Text>
+              <Text style={styles.caption}>Ahmed - ⭐ 4.9 - 247 livraisons</Text>
+            </View>
+            <StatusBadge label={isDriverAccountActive ? 'Actif' : 'En attente validation'} type={isDriverAccountActive ? 'success' : 'warning'} />
+          </View>
+
+          <View style={styles.driverInfoGrid}>
+            <View style={styles.driverInfoCard}>
+              <Text style={styles.caption}>Nom</Text>
+              <Text style={styles.body}>Ahmed</Text>
+            </View>
+            <View style={styles.driverInfoCard}>
+              <Text style={styles.caption}>Telephone</Text>
+              <Text style={styles.body}>+212 6 45 21 33 90</Text>
+            </View>
+            <View style={styles.driverInfoCard}>
+              <Text style={styles.caption}>Vehicule</Text>
+              <Text style={styles.body}>Scooter 125cc</Text>
+            </View>
+            <View style={styles.driverInfoCard}>
+              <Text style={styles.caption}>Zone</Text>
+              <Text style={styles.body}>Casablanca Centre</Text>
+            </View>
+          </View>
+
+          <View style={styles.sectionHeaderLeft}>
+            <MaterialCommunityIcons name="file-document-check-outline" size={18} color={TOKENS.secondary} />
+            <Text style={styles.h2}>Verification compte</Text>
+          </View>
+          <View style={styles.detailPanel}>
+            {driverValidationSteps.map((step) => (
+              <View key={`profile-${step.label}`} style={styles.checkRow}>
+                <Text style={styles.body}>{step.label}</Text>
+                <Text style={step.done ? styles.checkOk : styles.caption}>{step.done ? 'OK' : 'En attente'}</Text>
+              </View>
+            ))}
+          </View>
+
+          <View style={styles.sectionHeaderLeft}>
+            <MaterialCommunityIcons name="cash-multiple" size={18} color={TOKENS.secondary} />
+            <Text style={styles.h2}>Gains</Text>
+          </View>
+          <View style={styles.statsGrid}>
+            <View style={styles.statCard}><Text style={styles.statValue}>47.50</Text><Text style={styles.caption}>Aujourd'hui (EUR)</Text></View>
+            <View style={styles.statCard}><Text style={styles.statValue}>312.00</Text><Text style={styles.caption}>Cette semaine (EUR)</Text></View>
+            <View style={styles.statCard}><Text style={styles.statValue}>91%</Text><Text style={styles.caption}>Taux de livraison</Text></View>
+          </View>
+
+          <View style={styles.rowWrap}>
+            <AppButton title="Mettre a jour documents" onPress={() => Alert.alert('Documents', 'Upload documents (fake)')} variant="secondary" full={false} />
+            <AppButton title="Contacter support" onPress={() => Alert.alert('Support', 'support@medimirville.app (fake)')} full={false} />
+          </View>
+        </View>
+      </>
     );
   };
 
   const adminScreen = () => {
     if (adminTab === 'dashboard') {
+      const openIncidents = incidents.filter((i) => i.status === 'Ouvert').length;
+      const pendingOrders = orders.filter((o) => o.status === 'En attente' || o.status === 'Validee').length;
+
       return (
+        <>
         <View style={styles.card}>
-          <Text style={styles.h2}>Dashboard admin</Text>
+          <View style={styles.sectionHeaderRow}>
+            <View style={styles.sectionHeaderLeft}>
+              <MaterialCommunityIcons name="view-dashboard-outline" size={18} color={TOKENS.secondary} />
+              <Text style={styles.h2}>Dashboard admin</Text>
+            </View>
+            <StatusBadge label={`Alertes ${openIncidents}`} type={openIncidents > 0 ? 'warning' : 'success'} />
+          </View>
+
           <View style={styles.statsGrid}>
             <View style={styles.statCard}><Text style={styles.statValue}>2432</Text><Text style={styles.caption}>Utilisateurs</Text></View>
             <View style={styles.statCard}><Text style={styles.statValue}>{orders.length}</Text><Text style={styles.caption}>Commandes</Text></View>
             <View style={styles.statCard}><Text style={styles.statValue}>{orders.filter((o) => o.status === 'Livree').length}</Text><Text style={styles.caption}>Livraisons</Text></View>
+            <View style={styles.statCard}><Text style={styles.statValue}>{pendingOrders}</Text><Text style={styles.caption}>En attente/validation</Text></View>
+            <View style={styles.statCard}><Text style={styles.statValue}>{openIncidents}</Text><Text style={styles.caption}>Incidents ouverts</Text></View>
+            <View style={styles.statCard}><Text style={styles.statValue}>{unreadNotificationsCount}</Text><Text style={styles.caption}>Notifications non lues</Text></View>
           </View>
-          <View style={styles.detailPanel}>
-            <Text style={styles.caption}>Conformite et securite</Text>
-            <Text style={styles.body}>RGPD actif: consentement obligatoire + journalisation</Text>
-            <Text style={styles.body}>Chiffrement donnees sensibles: ordonnances, patient, paiement (mode demo)</Text>
-            <Text style={styles.body}>Acces admin prive strictement controle et trace</Text>
+
+          <View style={styles.adminOpsCard}>
+            <View style={styles.sectionHeaderLeft}>
+              <MaterialCommunityIcons name="clipboard-text-clock-outline" size={18} color={TOKENS.secondary} />
+              <Text style={styles.h2}>Operations du jour</Text>
+            </View>
+            <View style={styles.checkRow}><Text style={styles.body}>Commandes en verification</Text><Text style={styles.checkOk}>{pendingOrders}</Text></View>
+            <View style={styles.checkRow}><Text style={styles.body}>Livreurs en mission</Text><Text style={styles.checkOk}>{COURIERS.filter((c) => c.status === 'En mission').length}</Text></View>
+            <View style={styles.checkRow}><Text style={styles.body}>Incidents critiques</Text><Text style={openIncidents > 0 ? styles.caption : styles.checkOk}>{openIncidents > 0 ? `${openIncidents} a traiter` : 'Aucun'}</Text></View>
+            <View style={styles.rowWrap}>
+              <AppButton title="Voir incidents" onPress={() => setAdminTab('reports')} variant="secondary" full={false} />
+              <AppButton title="Ouvrir notifications" onPress={() => setNotificationsOpen(true)} full={false} />
+            </View>
+          </View>
+
+          <View style={styles.pharmacyComplianceCard}>
+            <View style={styles.sectionHeaderLeft}>
+              <MaterialCommunityIcons name="shield-check-outline" size={18} color={TOKENS.secondary} />
+              <Text style={styles.h2}>Conformite et securite</Text>
+            </View>
+            <View style={styles.infoRow}><MaterialCommunityIcons name="check-circle-outline" size={16} color={TOKENS.success} /><Text style={styles.body}>RGPD actif: consentement obligatoire + journalisation</Text></View>
+            <View style={styles.infoRow}><MaterialCommunityIcons name="check-circle-outline" size={16} color={TOKENS.success} /><Text style={styles.body}>Chiffrement donnees sensibles: ordonnances, patient, paiement (mode demo)</Text></View>
+            <View style={styles.infoRow}><MaterialCommunityIcons name="check-circle-outline" size={16} color={TOKENS.success} /><Text style={styles.body}>Acces admin prive strictement controle et trace</Text></View>
           </View>
         </View>
+        </>
       );
     }
 
@@ -1791,25 +2505,27 @@ export default function App() {
     return adminScreen();
   };
 
-  const notificationsCard = (
-    <View style={styles.card}>
-      <Text style={styles.h2}>Notifications</Text>
-      {notifications.length === 0 && <Text style={styles.body}>Aucune notification</Text>}
-      {notifications.map((n, i) => (
-        <Text key={`${n}-${i}`} style={styles.body}>- {n}</Text>
-      ))}
-    </View>
-  );
+  const securityRules = [
+    'RGPD: consentement explicite et traitement conforme',
+    'Chiffrement donnees sensibles (mode demo)',
+    'Authentification avec acces differencie par profil',
+    'Validation pharmacien obligatoire avant livraison',
+    'Code boitier a usage unique genere par algorithme',
+    'Acces admin journalise et strictement controle',
+  ];
 
   const securityCard = (
     <View style={styles.card}>
-      <Text style={styles.h2}>Securite et conformite</Text>
-      <Text style={styles.body}>- RGPD: consentement explicite et traitement conforme</Text>
-      <Text style={styles.body}>- Chiffrement donnees sensibles (mode demo)</Text>
-      <Text style={styles.body}>- Authentification avec acces differencie par profil</Text>
-      <Text style={styles.body}>- Validation pharmacien obligatoire avant livraison</Text>
-      <Text style={styles.body}>- Code boitier a usage unique genere par algorithme</Text>
-      <Text style={styles.body}>- Acces admin journalise et strictement controle</Text>
+      <View style={styles.sectionHeaderLeft}>
+        <MaterialCommunityIcons name="shield-check-outline" size={18} color={TOKENS.secondary} />
+        <Text style={styles.h2}>Securite et conformite</Text>
+      </View>
+      {securityRules.map((rule) => (
+        <View key={rule} style={styles.infoRow}>
+          <MaterialCommunityIcons name="check-circle-outline" size={16} color={TOKENS.success} />
+          <Text style={styles.body}>{rule}</Text>
+        </View>
+      ))}
     </View>
   );
 
@@ -1834,7 +2550,59 @@ export default function App() {
     </View>
   );
 
-  const showSystemCards = user?.role !== 'patient';
+  const notificationsSpace = (
+    <Modal visible={notificationsOpen} transparent animationType="fade" onRequestClose={() => setNotificationsOpen(false)}>
+      <View style={styles.modalOverlay}>
+        <View style={styles.notificationsPanel}>
+          <View style={styles.sectionHeaderRow}>
+            <View style={styles.sectionHeaderLeft}>
+              <MaterialCommunityIcons name="bell-ring-outline" size={18} color={TOKENS.secondary} />
+              <Text style={styles.h2}>Espace notifications</Text>
+            </View>
+            <AppButton title="Fermer" onPress={() => setNotificationsOpen(false)} variant="secondary" full={false} />
+          </View>
+
+          <View style={styles.notificationsToolbar}>
+            <View style={styles.notificationsFilterRow}>
+              <Pressable style={[styles.notifFilterPill, notifFilter === 'all' && styles.notifFilterPillActive]} onPress={() => setNotifFilter('all')}>
+                <Text style={[styles.notifFilterText, notifFilter === 'all' && styles.notifFilterTextActive]}>Toutes</Text>
+              </Pressable>
+              <Pressable style={[styles.notifFilterPill, notifFilter === 'unread' && styles.notifFilterPillActive]} onPress={() => setNotifFilter('unread')}>
+                <Text style={[styles.notifFilterText, notifFilter === 'unread' && styles.notifFilterTextActive]}>Non lues</Text>
+              </Pressable>
+              <Pressable style={[styles.notifFilterPill, notifFilter === 'read' && styles.notifFilterPillActive]} onPress={() => setNotifFilter('read')}>
+                <Text style={[styles.notifFilterText, notifFilter === 'read' && styles.notifFilterTextActive]}>Lues</Text>
+              </Pressable>
+            </View>
+            <View style={styles.notificationsActionsRow}>
+              <AppButton title="Tout lu" onPress={markAllNotificationsRead} variant="secondary" full={false} />
+              <AppButton title="Vider" onPress={() => setNotifications([])} variant="danger" full={false} />
+            </View>
+          </View>
+
+          <Text style={styles.caption}>{filteredNotifications.length} notification(s) - {unreadNotificationsCount} non lue(s)</Text>
+          <ScrollView style={styles.notificationsScroll}>
+            {filteredNotifications.length === 0 && <Text style={styles.body}>Aucune notification pour le moment.</Text>}
+            {filteredNotifications.map((n) => (
+              <View key={`notif-panel-${n.id}`} style={styles.notificationItem}>
+                <MaterialCommunityIcons name="circle-small" size={18} color={TOKENS.secondary} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.body}>{n.text}</Text>
+                  <Text style={styles.caption}>{new Date(n.createdAt).toLocaleTimeString()}</Text>
+                </View>
+                {!n.read && <StatusBadge label="Nouveau" type="warning" />}
+                {!n.read && <AppButton title="Lu" onPress={() => markNotificationRead(n.id)} variant="secondary" full={false} />}
+                <AppButton title="X" onPress={() => removeNotification(n.id)} variant="danger" full={false} />
+              </View>
+            ))}
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
+  );
+
+  const showSystemCards = user?.role === 'pharmacien' || user?.role === 'livreur';
+  const isPatientDetailView = user?.role === 'patient' && patientTab === 'detail';
   const showMobileCheckoutBar = user?.role === 'patient' && patientTab === 'cart' && cartRows.length > 0;
 
   if (booting) {
@@ -1863,7 +2631,6 @@ export default function App() {
             {renderDesktopHeader()}
             <ScrollView contentContainerStyle={styles.desktopContent}>
               {renderContent()}
-              {showSystemCards && notificationsCard}
               {showSystemCards && securityCard}
             </ScrollView>
           </View>
@@ -1872,6 +2639,7 @@ export default function App() {
           <Text style={styles.chatFabText}>{chatOpen ? 'X' : 'AI'}</Text>
         </Pressable>
         {chatOpen && chatPanel}
+        {notificationsSpace}
       </SafeAreaView>
     );
   }
@@ -1880,9 +2648,8 @@ export default function App() {
     <SafeAreaView style={styles.appMobile}>
       <StatusBar style="dark" />
       {renderTopBar()}
-      <ScrollView contentContainerStyle={styles.mobileContent}>
+      <ScrollView contentContainerStyle={[styles.mobileContent, isPatientDetailView && styles.mobileContentDetail]}>
         {renderContent()}
-        {showSystemCards && notificationsCard}
         {showSystemCards && securityCard}
       </ScrollView>
       {showMobileCheckoutBar && (
@@ -1894,11 +2661,12 @@ export default function App() {
           <AppButton title="Checkout" onPress={() => void placeOrder()} full={false} />
         </View>
       )}
-      {renderBottomNav()}
+      {!isPatientDetailView && renderBottomNav()}
       <Pressable style={styles.chatFabMobile} onPress={() => setChatOpen((v) => !v)}>
         <Text style={styles.chatFabText}>{chatOpen ? 'X' : 'AI'}</Text>
       </Pressable>
       {chatOpen && <View style={styles.chatPanelMobile}>{chatPanel}</View>}
+      {notificationsSpace}
     </SafeAreaView>
   );
 }
@@ -2190,7 +2958,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   topRightIcons: {
-    width: 96,
+    width: 172,
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'flex-end',
@@ -2225,6 +2993,20 @@ const styles = StyleSheet.create({
   topCountText: {
     color: '#FFFFFF',
     fontSize: 10,
+    fontWeight: '700',
+  },
+  topLogoutBtn: {
+    height: 30,
+    borderRadius: 999,
+    backgroundColor: TOKENS.secondary,
+    paddingHorizontal: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  topLogoutText: {
+    color: '#FFFFFF',
+    fontSize: 11,
     fontWeight: '700',
   },
   topLeft: {
@@ -2276,6 +3058,9 @@ const styles = StyleSheet.create({
     gap: 14,
     paddingBottom: 130,
     backgroundColor: TOKENS.background,
+  },
+  mobileContentDetail: {
+    paddingBottom: 26,
   },
   bottomNav: {
     position: 'absolute',
@@ -2483,6 +3268,37 @@ const styles = StyleSheet.create({
   },
   filterRow: {
     gap: 8,
+  },
+  catalogCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#DCE4EC',
+    padding: 10,
+    marginBottom: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    shadowColor: '#000000',
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 1,
+  },
+  catalogImage: {
+    width: 88,
+    height: 88,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: TOKENS.border,
+  },
+  catalogContent: {
+    flex: 1,
+    gap: 3,
+  },
+  catalogActions: {
+    gap: 8,
+    alignItems: 'flex-end',
   },
   orderCard: {
     backgroundColor: '#FFFFFF',
@@ -2792,6 +3608,139 @@ const styles = StyleSheet.create({
     padding: 12,
     gap: 10,
   },
+  profileHero: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  profileAvatarLg: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: '#DCEBFF',
+    borderWidth: 1,
+    borderColor: '#BBD7FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  profileAvatarLgText: {
+    color: TOKENS.secondary,
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  quickOptionGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  quickOptionCard: {
+    width: '48%',
+    minHeight: 82,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: TOKENS.border,
+    backgroundColor: '#F8FBFF',
+    padding: 10,
+    gap: 4,
+  },
+  quickOptionHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  quickOptionIconWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: '#EAF2FF',
+    borderWidth: 1,
+    borderColor: '#CFE0FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  quickOptionTitle: {
+    color: TOKENS.text,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  switchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: TOKENS.border,
+    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  switchLabelWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  switchTrack: {
+    width: 42,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#D4DCE6',
+    justifyContent: 'center',
+    paddingHorizontal: 2,
+  },
+  switchTrackOn: {
+    backgroundColor: '#9AC2F3',
+  },
+  switchThumb: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#FFFFFF',
+  },
+  switchThumbOn: {
+    alignSelf: 'flex-end',
+  },
+  loyaltyCard: {
+    borderWidth: 1,
+    borderColor: '#CFE0FF',
+    borderRadius: 14,
+    backgroundColor: '#F2F8FF',
+    padding: 12,
+    gap: 8,
+  },
+  loyaltyTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  loyaltyBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderWidth: 1,
+    borderColor: '#BFD6F8',
+    backgroundColor: '#E1EEFF',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  loyaltyBadgeText: {
+    color: '#0B4EA2',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  loyaltyProgressBg: {
+    width: '100%',
+    height: 8,
+    borderRadius: 999,
+    backgroundColor: '#DCE8F8',
+    overflow: 'hidden',
+  },
+  loyaltyProgressFill: {
+    width: '62%',
+    height: '100%',
+    backgroundColor: '#3B82F6',
+  },
   miniProductsRow: {
     flexDirection: 'row',
     gap: 8,
@@ -2852,6 +3801,225 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: TOKENS.secondary,
     borderRadius: 8,
+  },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  sectionHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  pharmOrderCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#D9E4EF',
+    borderLeftWidth: 4,
+    borderLeftColor: '#0F9D8F',
+    padding: 12,
+    gap: 10,
+  },
+  pharmOrderTop: {
+    flexDirection: 'row',
+    gap: 10,
+    alignItems: 'flex-start',
+  },
+  pharmMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 3,
+  },
+  pharmActionsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  trackingCard: {
+    borderWidth: 1,
+    borderColor: '#D4E0EC',
+    borderRadius: 14,
+    backgroundColor: '#F7FBFF',
+    padding: 12,
+    gap: 10,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+  },
+  driverProfileHero: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  driverAvatarLg: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    borderWidth: 1,
+    borderColor: '#BBD7FF',
+    backgroundColor: '#EAF3FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  driverInfoGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  driverInfoCard: {
+    width: '48%',
+    borderWidth: 1,
+    borderColor: TOKENS.border,
+    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    padding: 10,
+    gap: 4,
+  },
+  driverProgressWrap: {
+    gap: 6,
+  },
+  driverProgressBarBg: {
+    width: '100%',
+    height: 9,
+    borderRadius: 999,
+    backgroundColor: '#DCE8F8',
+    overflow: 'hidden',
+  },
+  driverProgressBarFill: {
+    height: '100%',
+    backgroundColor: TOKENS.secondary,
+  },
+  driverNavMetaCard: {
+    borderWidth: 1,
+    borderColor: '#D9E4EF',
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+    padding: 10,
+    gap: 6,
+  },
+  driverNavStepsCard: {
+    borderWidth: 1,
+    borderColor: '#D8E3EF',
+    borderRadius: 14,
+    backgroundColor: '#F7FBFF',
+    padding: 10,
+    gap: 8,
+  },
+  stockRowCard: {
+    borderWidth: 1,
+    borderColor: '#D8E2ED',
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+    padding: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  stockRowImage: {
+    width: 62,
+    height: 62,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: TOKENS.border,
+  },
+  stockQtyWrap: {
+    minWidth: 78,
+    alignItems: 'center',
+    gap: 4,
+  },
+  stockQtyText: {
+    color: TOKENS.secondary,
+    fontSize: 22,
+    fontWeight: '800',
+  },
+  stockActionsRow: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  stockActionBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: TOKENS.border,
+    backgroundColor: '#F6FAFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stockActionText: {
+    color: TOKENS.text,
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  stockCreatePanel: {
+    width: '100%',
+    maxWidth: 560,
+    alignSelf: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: TOKENS.border,
+    padding: 14,
+    gap: 8,
+    shadowColor: '#000000',
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
+  },
+  stockCreateFieldHalf: {
+    width: '48%',
+  },
+  pharmacyProfileHero: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  pharmacyAvatar: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    borderWidth: 1,
+    borderColor: '#BFD6F8',
+    backgroundColor: '#EAF3FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pharmacyInfoGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  pharmacyInfoCard: {
+    width: '48%',
+    borderWidth: 1,
+    borderColor: TOKENS.border,
+    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    padding: 10,
+    gap: 4,
+  },
+  pharmacyComplianceCard: {
+    borderWidth: 1,
+    borderColor: '#CFE0FF',
+    borderRadius: 14,
+    backgroundColor: '#F3F8FF',
+    padding: 12,
+    gap: 8,
+  },
+  adminOpsCard: {
+    borderWidth: 1,
+    borderColor: '#D7E4F2',
+    borderRadius: 14,
+    backgroundColor: '#F9FCFF',
+    padding: 12,
+    gap: 8,
   },
   appDesktop: {
     flex: 1,
@@ -2946,33 +4114,6 @@ const styles = StyleSheet.create({
     color: '#1F2937',
     fontSize: 28,
     fontWeight: '700',
-  },
-  rolePillsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    flexWrap: 'wrap',
-    flex: 1,
-  },
-  rolePill: {
-    borderWidth: 1,
-    borderColor: '#B8C4D1',
-    backgroundColor: '#F7F9FC',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  rolePillActive: {
-    backgroundColor: '#E6F8EE',
-    borderColor: '#79C8A9',
-  },
-  rolePillText: {
-    color: '#1F2937',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  rolePillTextActive: {
-    color: '#0A7E56',
   },
   desktopHeaderRight: {
     flexDirection: 'row',
@@ -3111,6 +4252,72 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
     elevation: 3,
+  },
+  notificationsPanel: {
+    width: '100%',
+    maxWidth: 520,
+    alignSelf: 'center',
+    maxHeight: '75%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: TOKENS.border,
+    padding: 12,
+    gap: 10,
+    shadowColor: '#000000',
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
+  },
+  notificationsScroll: {
+    maxHeight: 320,
+  },
+  notificationsToolbar: {
+    gap: 8,
+  },
+  notificationsFilterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  notifFilterPill: {
+    borderWidth: 1,
+    borderColor: TOKENS.border,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  notifFilterPillActive: {
+    borderColor: '#8AB8F0',
+    backgroundColor: '#EAF3FF',
+  },
+  notifFilterText: {
+    color: '#526273',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  notifFilterTextActive: {
+    color: TOKENS.secondary,
+  },
+  notificationsActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  notificationItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+    borderWidth: 1,
+    borderColor: TOKENS.border,
+    backgroundColor: '#F8FBFF',
+    borderRadius: 10,
+    padding: 8,
+    marginBottom: 8,
   },
   chatScroll: {
     maxHeight: 180,

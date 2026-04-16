@@ -5,6 +5,7 @@ Application Expo React Native (TypeScript) pour mobile et web responsive.
 ## Documentation projet
 
 - Cahier des charges complet: voir `CAHIER_DES_CHARGES.md`
+- Prototype UI multi-role statique (web): `web-prototype/index.html`
 
 ## Installation
 

@@ -1,0 +1,637 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MediLivraison - Static Multi-Role UI</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="global-header">
+        <div>
+          <h1>MediLivraison UI Prototype</h1>
+          <p>Static multi-role pharmaceutical delivery interface (no backend)</p>
+        </div>
+        <div class="role-switch" role="tablist" aria-label="Role tabs">
+          <button class="role-tab active" data-role="patient">Patient</button>
+          <button class="role-tab" data-role="pharmacist">Pharmacist</button>
+          <button class="role-tab" data-role="driver">Delivery Driver</button>
+          <button class="role-tab" data-role="admin">Admin</button>
+        </div>
+      </header>
+
+      <div class="toast-overlay">
+        <div class="toast">
+          <i data-lucide="bell"></i>
+          <span>Nouvelle commande #00124 assignee au livreur.</span>
+        </div>
+      </div>
+
+      <main>
+        <section class="role-panel active" id="role-patient">
+          <div class="role-title-row">
+            <h2>Patient Interface</h2>
+            <span class="chip chip-blue">Primary #3B82F6</span>
+          </div>
+
+          <div class="screen-grid mobile-grid">
+            <article class="screen-card">
+              <h3>Onboarding & Auth</h3>
+              <div class="mini-splash">
+                <div class="logo-dot">M</div>
+                <p class="tagline">Livraison sante rapide et securisee</p>
+              </div>
+              <div class="field-group">
+                <label>Email</label>
+                <input value="marie@email.com" />
+              </div>
+              <div class="field-group error">
+                <label>Password</label>
+                <input type="password" value="123" />
+                <small>Mot de passe trop court (min 8 caracteres)</small>
+              </div>
+              <a class="inline-link" href="#">Forgot password?</a>
+              <button class="btn-primary">Connexion</button>
+              <div class="split-actions">
+                <button class="btn-secondary">Google</button>
+                <button class="btn-secondary">Apple</button>
+              </div>
+              <hr />
+              <h4>Register</h4>
+              <div class="field-grid two-col">
+                <div class="field-group"><label>Nom complet</label><input value="Marie Lambert" /></div>
+                <div class="field-group"><label>Email</label><input value="marie@email.com" /></div>
+                <div class="field-group"><label>Telephone</label><input value="0612345678" /></div>
+                <div class="field-group"><label>Password</label><input type="password" value="********" /></div>
+                <div class="field-group error"><label>Numero SS (15)</label><input value="2860" /><small>15 chiffres requis</small></div>
+                <div class="field-group"><label>Mutuelle + numero</label><input value="MGEN - 00484556" /></div>
+              </div>
+            </article>
+
+            <article class="screen-card">
+              <h3>Home</h3>
+              <div class="top-row">
+                <strong>Bonjour, Marie</strong>
+                <button class="icon-btn"><i data-lucide="bell"></i></button>
+              </div>
+              <div class="promo-banner">
+                <div>
+                  <p class="promo-kicker">15% OFF premiere commande</p>
+                  <p>Economisez sur vos soins quotidiens</p>
+                  <button class="btn-primary small">Commander</button>
+                </div>
+                <div class="placeholder-icon"><i data-lucide="heart-pulse"></i></div>
+              </div>
+              <div class="pill-row">
+                <span class="pill">Medicaments</span>
+                <span class="pill">Parapharmacie</span>
+                <span class="pill">Vitamines</span>
+                <span class="pill">Soins</span>
+                <span class="pill">Materiel medical</span>
+              </div>
+              <h4>Commandes recentes</h4>
+              <div class="order-card">
+                <img src="https://images.unsplash.com/photo-1587854692152-cbe660dbde88?auto=format&fit=crop&w=200&q=80" alt="prod" />
+                <div>
+                  <p>Vitamin C 1000mg</p>
+                  <small>Pharmacie Centrale</small>
+                  <div class="row"><span class="badge badge-blue">En cours</span><small>02/04/2026</small></div>
+                </div>
+              </div>
+              <div class="order-card">
+                <img src="https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&w=200&q=80" alt="prod" />
+                <div>
+                  <p>Doliprane 1000mg</p>
+                  <small>Pharmacie Saint-Michel</small>
+                  <div class="row"><span class="badge badge-green">Livre</span><small>31/03/2026</small></div>
+                </div>
+              </div>
+              <h4>Produits populaires</h4>
+              <div class="horizontal-cards">
+                <div class="product-card">
+                  <img src="https://images.unsplash.com/photo-1573883431205-98b5f10aaedb?auto=format&fit=crop&w=300&q=80" alt="vit" />
+                  <p>Omega 3</p><small>NutriLife</small>
+                  <div class="rating">★★★★★ <span>(86)</span></div>
+                  <div class="row"><strong>€11.90</strong><button class="btn-primary tiny">Ajouter</button></div>
+                </div>
+                <div class="product-card">
+                  <img src="https://images.unsplash.com/photo-1628771065518-0d82f1938462?auto=format&fit=crop&w=300&q=80" alt="skin" />
+                  <p>Creme hydratante</p><small>Derma+</small>
+                  <div class="rating">★★★★☆ <span>(52)</span></div>
+                  <div class="row"><strong>€12.00</strong><button class="btn-primary tiny">Ajouter</button></div>
+                </div>
+              </div>
+            </article>
+
+            <article class="screen-card">
+              <h3>Parapharmacie Catalogue</h3>
+              <div class="search-box"><i data-lucide="search"></i><input value="Rechercher un produit" /></div>
+              <div class="pill-row">
+                <span class="pill active">Tous</span>
+                <span class="pill">Cremes</span>
+                <span class="pill">Vitamines</span>
+                <span class="pill">Hygiene</span>
+                <span class="pill">Bebe</span>
+                <span class="pill">Minceur</span>
+              </div>
+              <div class="product-grid">
+                <div class="grid-item"><p>Doliprane 1000mg</p><small>Sanofi</small><strong>€3.50</strong><span class="badge badge-green">En stock</span><button class="btn-icon">+</button></div>
+                <div class="grid-item"><p>Vitamin C 1000mg</p><small>NutriLife</small><strong>€8.90</strong><span class="badge badge-green">En stock</span><button class="btn-icon">+</button></div>
+                <div class="grid-item"><p>Creme Hydratante</p><small>Derma+</small><strong>€12.00</strong><span class="badge badge-green">En stock</span><button class="btn-icon">+</button></div>
+                <div class="grid-item"><p>Thermometre digital</p><small>MediTech</small><strong>€19.99</strong><span class="badge badge-red">Rupture</span><button class="btn-icon">+</button></div>
+                <div class="grid-item"><p>Masques chirurgicaux x50</p><small>SafeCare</small><strong>€6.50</strong><span class="badge badge-green">En stock</span><button class="btn-icon">+</button></div>
+                <div class="grid-item"><p>Gel hydroalcoolique 500ml</p><small>BioSafe</small><strong>€4.20</strong><span class="badge badge-green">En stock</span><button class="btn-icon">+</button></div>
+              </div>
+            </article>
+
+            <article class="screen-card">
+              <h3>Product Detail</h3>
+              <div class="top-row">
+                <button class="icon-btn"><i data-lucide="arrow-left"></i></button>
+                <button class="icon-btn"><i data-lucide="share-2"></i></button>
+              </div>
+              <div class="carousel">
+                <div class="carousel-track">
+                  <div class="slide">Image 1</div>
+                  <div class="slide">Image 2</div>
+                  <div class="slide">Image 3</div>
+                </div>
+                <div class="dots"><span class="dot active"></span><span class="dot"></span><span class="dot"></span></div>
+              </div>
+              <p class="title-lg">Vitamin C 1000mg</p>
+              <small>NutriLife</small>
+              <div class="rating">★★★★☆ <span>(124 avis)</span></div>
+              <p class="price-lg">€8.90</p>
+              <div class="qty-row"><button>-</button><span>1</span><button>+</button></div>
+              <button class="btn-primary">Ajouter au panier</button>
+              <div class="tabs-row"><span class="tab active">Description</span><span class="tab">Composition</span></div>
+              <p class="muted">Supplement quotidien pour soutien immunitaire. Prendre 1 comprime par jour.</p>
+              <h4>Produits similaires</h4>
+              <div class="horizontal-cards compact">
+                <div class="mini-card">Omega 3<br /><strong>€11.90</strong></div>
+                <div class="mini-card">Magnesium<br /><strong>€9.50</strong></div>
+                <div class="mini-card">Zinc + C<br /><strong>€7.90</strong></div>
+              </div>
+            </article>
+
+            <article class="screen-card">
+              <h3>Ordonnance Upload</h3>
+              <div class="info-box">Certains medicaments necessitent une ordonnance valide.</div>
+              <div class="upload-zone">
+                <i data-lucide="camera"></i>
+                <p>Deposer votre ordonnance</p>
+                <div class="split-actions">
+                  <button class="btn-secondary">Prendre une photo</button>
+                  <button class="btn-secondary">Importer galerie</button>
+                </div>
+              </div>
+              <div class="file-card">
+                <div class="thumb">IMG</div>
+                <div>
+                  <p>ordonnance_0404.jpg</p>
+                  <span class="badge badge-amber">Validation en attente</span>
+                </div>
+              </div>
+              <button class="btn-primary">Soumettre la commande</button>
+            </article>
+
+            <article class="screen-card">
+              <h3>Cart</h3>
+              <p class="title-sm">Mon Panier (3 articles)</p>
+              <div class="cart-row"><div><p>Doliprane 1000mg</p><small>€3.50</small></div><div class="qty-row mini"><button>-</button><span>1</span><button>+</button></div><button class="icon-btn"><i data-lucide="trash-2"></i></button></div>
+              <div class="cart-row"><div><p>Vitamin C 1000mg</p><small>€8.90</small></div><div class="qty-row mini"><button>-</button><span>1</span><button>+</button></div><button class="icon-btn"><i data-lucide="trash-2"></i></button></div>
+              <div class="cart-row"><div><p>Gel hydroalcoolique</p><small>€4.20</small></div><div class="qty-row mini"><button>-</button><span>2</span><button>+</button></div><button class="icon-btn"><i data-lucide="trash-2"></i></button></div>
+
+              <div class="summary-card">
+                <div class="row"><span>Sous-total</span><strong>€24.40</strong></div>
+                <div class="row"><span>Frais de livraison</span><strong>€2.50</strong></div>
+                <div class="row"><span>Remise</span><strong>-€3.50</strong></div>
+                <hr />
+                <div class="row"><span>Total</span><strong class="text-blue">€23.40</strong></div>
+              </div>
+              <div class="address-card">
+                <div>
+                  <p>Adresse de livraison</p>
+                  <small>12 Rue des Fleurs, Casablanca</small>
+                </div>
+                <i data-lucide="pencil"></i>
+              </div>
+              <div class="tabs-row"><span class="tab active">Carte bancaire</span><span class="tab">Portefeuille</span></div>
+              <button class="btn-primary">Passer la commande</button>
+            </article>
+
+            <article class="screen-card">
+              <h3>Order Tracking</h3>
+              <div class="row"><strong>#00124</strong><span class="badge badge-blue">Livraison estimee: 25 min</span></div>
+              <div class="tracker">
+                <span class="done">Commande recue</span>
+                <span class="done">Validee par pharmacien</span>
+                <span class="active">En cours de livraison</span>
+                <span>Livree</span>
+              </div>
+              <div class="map-placeholder">
+                <i data-lucide="map-pin"></i>
+                <div class="route-line"></div>
+              </div>
+              <div class="driver-card">
+                <div class="avatar">MD</div>
+                <div><p>Mohammed D.</p><small>⭐ 4.8</small></div>
+                <button class="icon-btn"><i data-lucide="phone"></i></button>
+              </div>
+              <div class="unlock-box">_ _ _ _<small>Vous recevrez le code a la livraison</small></div>
+              <details open>
+                <summary>Details commande</summary>
+                <p>Produits: Doliprane, Vitamine C, Gel hydroalcoolique</p>
+                <p>Pharmacie: Pharmacie Centrale</p>
+                <p>Adresse: 45 Boulevard Anfa</p>
+              </details>
+            </article>
+
+            <article class="screen-card">
+              <h3>Profile</h3>
+              <div class="profile-head">
+                <div class="avatar large">ML</div>
+                <p>Marie Lambert</p>
+                <small>marie@email.com</small>
+              </div>
+              <div class="info-list">
+                <div class="info-card"><span>Numero SS</span><strong>•••• •••• ••• 12</strong></div>
+                <div class="info-card"><span>Mutuelle</span><strong>MGEN - N° ••••••</strong></div>
+              </div>
+              <ul class="menu-list">
+                <li><i data-lucide="package"></i>Mes commandes<i data-lucide="chevron-right"></i></li>
+                <li><i data-lucide="map-pin"></i>Mes adresses<i data-lucide="chevron-right"></i></li>
+                <li><i data-lucide="credit-card"></i>Paiement<i data-lucide="chevron-right"></i></li>
+                <li><i data-lucide="bell"></i>Notifications<i data-lucide="chevron-right"></i></li>
+                <li><i data-lucide="life-buoy"></i>Aide<i data-lucide="chevron-right"></i></li>
+                <li><i data-lucide="log-out"></i>Deconnexion<i data-lucide="chevron-right"></i></li>
+              </ul>
+            </article>
+          </div>
+        </section>
+
+        <section class="role-panel" id="role-pharmacist">
+          <div class="role-title-row">
+            <h2>Pharmacist Interface</h2>
+            <span class="chip chip-teal">Accent #0D9488</span>
+          </div>
+          <div class="screen-grid mobile-grid pharmacist-theme">
+            <article class="screen-card">
+              <h3>Login Pharmacien</h3>
+              <div class="field-group"><label>Email</label><input value="pharmacie@centrale.ma" /></div>
+              <div class="field-group"><label>Password</label><input type="password" value="********" /></div>
+              <div class="field-group"><label>Numero RPPS</label><input value="12345678901" /></div>
+              <button class="btn-teal">Connexion Pharmacien</button>
+            </article>
+
+            <article class="screen-card">
+              <h3>Dashboard</h3>
+              <div class="top-row"><strong>Pharmacie Centrale</strong><span class="notif-pill">3</span></div>
+              <div class="kpi-grid four">
+                <div class="kpi"><p>12</p><small>Commandes aujourd'hui</small></div>
+                <div class="kpi"><p>3</p><small>En attente</small></div>
+                <div class="kpi"><p>8</p><small>Validees</small></div>
+                <div class="kpi"><p>1</p><small>En livraison</small></div>
+              </div>
+
+              <h4>Nouvelles commandes</h4>
+              <div class="order-card highlight-amber">
+                <div>
+                  <p>Patient: Karim A.</p>
+                  <small>Produits: Doliprane, Gel, Vitamine C</small>
+                  <div class="row"><span class="badge badge-amber">Ordonnance requise</span><small>Recue a 14:02</small></div>
+                </div>
+                <div class="split-actions"><button class="btn-green">Valider</button><button class="btn-red">Refuser</button></div>
+              </div>
+              <div class="order-card highlight-amber">
+                <div>
+                  <p>Patient: Nadia R.</p>
+                  <small>Produits: Thermometre, Creme</small>
+                  <div class="row"><span class="badge badge-amber">Ordonnance requise</span><small>Recue a 14:18</small></div>
+                </div>
+                <div class="split-actions"><button class="btn-green">Valider</button><button class="btn-red">Refuser</button></div>
+              </div>
+
+              <h4>En cours de livraison</h4>
+              <div class="delivery-row">
+                <div class="row">
+                  <div class="avatar">MD</div>
+                  <div><p>Mohammed D.</p><small>Status: En route</small></div>
+                </div>
+                <div class="map-mini"></div>
+                <span class="badge badge-blue">ETA 18 min</span>
+              </div>
+            </article>
+
+            <article class="screen-card">
+              <h3>Order Validation</h3>
+              <p>Patient: Karim A. - SS: •••• •••• ••• 55</p>
+              <ul>
+                <li>Doliprane x1</li>
+                <li>Vitamin C x2</li>
+                <li>Gel hydroalcoolique x1</li>
+              </ul>
+              <div class="file-card"><div class="thumb">IMG</div><div><p>ordonnance_00124.jpg</p><small>Tap to fullscreen</small></div></div>
+              <div class="info-box">Mutuelle: CNOPS - N° 902301</div>
+              <div class="field-group"><label>Notes pour le livreur</label><textarea>Livrer avant 18h, immeuble B.</textarea></div>
+              <button class="btn-teal">Generer code de securite</button>
+              <div class="unlock-box">4 8 2 7</div>
+              <div class="split-actions">
+                <button class="btn-green">Valider et assigner livreur</button>
+                <button class="btn-red">Refuser la commande</button>
+              </div>
+            </article>
+
+            <article class="screen-card">
+              <h3>Livreur Tracking</h3>
+              <p>Suivi livraison #00124</p>
+              <div class="map-placeholder truck-map">
+                <div class="truck-icon"><i data-lucide="truck"></i></div>
+              </div>
+              <div class="driver-card">
+                <div class="avatar">MD</div>
+                <div><p>Mohammed D.</p><small>Scooter - 06 99 88 77 66</small></div>
+              </div>
+              <div class="timeline">
+                <div class="done">Commande recuperee</div>
+                <div class="active">En route</div>
+                <div>Livraison confirmee</div>
+              </div>
+              <label class="toggle"><input type="checkbox" checked /> Commande recuperee</label>
+            </article>
+
+            <article class="screen-card">
+              <h3>Inventory / Catalogue</h3>
+              <div class="row">
+                <div class="search-box inline"><i data-lucide="search"></i><input value="Rechercher produit" /></div>
+                <button class="btn-teal small">Ajouter produit</button>
+              </div>
+              <table class="table">
+                <thead><tr><th>Nom</th><th>Categorie</th><th>Stock</th><th>Prix</th><th>Actions</th></tr></thead>
+                <tbody>
+                  <tr><td>Doliprane 1000mg</td><td>Medicaments</td><td>34</td><td>€3.50</td><td>✏️ 🗑️</td></tr>
+                  <tr><td>Vitamin C 1000mg</td><td>Vitamines</td><td>28</td><td>€8.90</td><td>✏️ 🗑️</td></tr>
+                  <tr><td>Creme Hydratante</td><td>Soins</td><td>12</td><td>€12.00</td><td>✏️ 🗑️</td></tr>
+                  <tr><td>Thermometre digital</td><td>Materiel</td><td>8</td><td>€19.99</td><td>✏️ 🗑️</td></tr>
+                  <tr><td>Masques x50</td><td>Hygiene</td><td>45</td><td>€6.50</td><td>✏️ 🗑️</td></tr>
+                  <tr><td>Gel 500ml</td><td>Hygiene</td><td>56</td><td>€4.20</td><td>✏️ 🗑️</td></tr>
+                </tbody>
+              </table>
+            </article>
+          </div>
+        </section>
+
+        <section class="role-panel" id="role-driver">
+          <div class="role-title-row">
+            <h2>Delivery Driver Interface</h2>
+            <span class="chip chip-orange">Accent #F97316</span>
+          </div>
+          <div class="screen-grid mobile-grid driver-theme">
+            <article class="screen-card">
+              <h3>Onboarding Step 1/4</h3>
+              <div class="field-group"><label>Nom</label><input value="Youssef Benali" /></div>
+              <div class="field-group"><label>Telephone</label><input value="0655223344" /></div>
+              <div class="field-group"><label>ID number</label><input value="AB902311" /></div>
+              <h3>Step 2/4</h3>
+              <div class="upload-zone"><i data-lucide="upload"></i><p>Upload statut auto-entrepreneur</p></div>
+              <h3>Step 3/4 Formation</h3>
+              <label class="check"><input type="checkbox" checked /> Manipulation medicaments</label>
+              <label class="check"><input type="checkbox" checked /> Chaine de securite</label>
+              <label class="check"><input type="checkbox" checked /> Confidentialite patient</label>
+              <label class="check"><input type="checkbox" checked /> Livraison sensible</label>
+              <label class="check"><input type="checkbox" checked /> Gestion incidents</label>
+              <h3>Step 4/4</h3>
+              <div class="empty-state">
+                <i data-lucide="clock-3"></i>
+                <p>Compte en attente de validation</p>
+                <small>Vous recevrez un email de confirmation</small>
+              </div>
+            </article>
+
+            <article class="screen-card">
+              <h3>Dashboard</h3>
+              <div class="tabs-row"><span class="tab active">Disponible 🟢</span><span class="tab">Indisponible 🔴</span></div>
+              <div class="summary-card">
+                <div class="row"><span>Aujourd'hui</span><strong>€47.50</strong></div>
+                <div class="row"><span>Cette semaine</span><strong>€312.00</strong></div>
+              </div>
+              <h4>Nouvelle commande disponible</h4>
+              <div class="pulse-card">
+                <p>Pharmacie Centrale - 12 Av Sante</p>
+                <p>Client: 48 Rue Atlas</p>
+                <div class="row"><small>22 min | 4.3 km</small><strong>€6.50</strong></div>
+                <div class="thumb-row"><div class="thumb"></div><div class="thumb"></div><div class="thumb"></div></div>
+                <div class="split-actions"><button class="btn-orange">Accepter</button><button class="btn-red">Refuser</button></div>
+              </div>
+              <h4>Historique aujourd'hui</h4>
+              <ul>
+                <li>#00118 - Livree - €5.50</li>
+                <li>#00115 - Livree - €6.00</li>
+                <li>#00112 - Livree - €7.20</li>
+              </ul>
+            </article>
+
+            <article class="screen-card">
+              <h3>Active Delivery</h3>
+              <div class="tracker"><span class="done">Pharmacie</span><span class="active">Client</span></div>
+              <div class="map-placeholder"></div>
+              <div class="step-card">
+                <p>Rendez-vous a la Pharmacie Centrale</p>
+                <small>12 Av Sante</small>
+                <button class="btn-orange">Arrive a la pharmacie</button>
+              </div>
+              <div class="step-card">
+                <p>Scanner le code QR du colis</p>
+                <div class="qr-box">QR</div>
+              </div>
+              <div class="step-card">
+                <p>Client: 48 Rue Atlas</p>
+                <button class="btn-orange">Confirmer la livraison</button>
+              </div>
+              <div class="unlock-box">Code colis: 4827</div>
+            </article>
+
+            <article class="screen-card">
+              <h3>Profile / Documents</h3>
+              <div class="profile-head">
+                <div class="avatar large">YB</div>
+                <p>Youssef Benali</p>
+                <small>⭐ 4.9 - 247 livraisons</small>
+              </div>
+              <div class="info-list">
+                <div class="info-card">Piece d'identite <span class="badge badge-green">Valide</span></div>
+                <div class="info-card">Statut auto-entrepreneur <span class="badge badge-green">Valide</span></div>
+                <div class="info-card">Formation completee <span class="badge badge-green">Valide</span></div>
+              </div>
+              <details>
+                <summary>Historique gains hebdo</summary>
+                <p>Semaine 14: €312.00</p>
+                <p>Semaine 13: €298.50</p>
+                <p>Semaine 12: €341.20</p>
+              </details>
+            </article>
+          </div>
+        </section>
+
+        <section class="role-panel" id="role-admin">
+          <div class="role-title-row">
+            <h2>Admin Interface (Desktop)</h2>
+            <span class="chip chip-indigo">Sidebar #1E293B</span>
+          </div>
+
+          <div class="admin-layout">
+            <aside class="admin-sidebar">
+              <h3>MediLivraison Admin</h3>
+              <nav>
+                <a href="#"><i data-lucide="layout-dashboard"></i>Dashboard</a>
+                <a href="#"><i data-lucide="users"></i>Utilisateurs</a>
+                <a href="#"><i data-lucide="package"></i>Commandes</a>
+                <a href="#"><i data-lucide="file-text"></i>Ordonnances</a>
+                <a href="#"><i data-lucide="bike"></i>Livreurs</a>
+                <a href="#"><i data-lucide="bar-chart-3"></i>Statistiques</a>
+                <a href="#"><i data-lucide="shield-alert"></i>Incidents</a>
+                <a href="#"><i data-lucide="settings"></i>Parametres</a>
+                <a href="#"><i data-lucide="log-out"></i>Deconnexion</a>
+              </nav>
+            </aside>
+
+            <div class="admin-content">
+              <article class="admin-block">
+                <h3>Dashboard</h3>
+                <div class="kpi-grid four">
+                  <div class="kpi"><p>1,248</p><small>Total utilisateurs</small></div>
+                  <div class="kpi"><p>3,847</p><small>Commandes ce mois</small></div>
+                  <div class="kpi"><p>23</p><small>Livreurs actifs</small></div>
+                  <div class="kpi"><p>€48,320</p><small>CA mensuel</small></div>
+                </div>
+                <div class="chart-box">Evolution des commandes - 30 jours</div>
+                <table class="table">
+                  <thead><tr><th>Timestamp</th><th>Action</th><th>User</th><th>Status</th></tr></thead>
+                  <tbody>
+                    <tr><td>12:02</td><td>Validation ordonnance</td><td>Pharmacie Centrale</td><td><span class="badge badge-green">Succes</span></td></tr>
+                    <tr><td>12:06</td><td>Nouveau compte patient</td><td>Nadia R.</td><td><span class="badge badge-blue">Info</span></td></tr>
+                    <tr><td>12:11</td><td>Livraison confirmee</td><td>Mohammed D.</td><td><span class="badge badge-green">OK</span></td></tr>
+                    <tr><td>12:13</td><td>Ordonnance refusee</td><td>Pharmacie Atlas</td><td><span class="badge badge-red">Refusee</span></td></tr>
+                    <tr><td>12:18</td><td>Incident cree</td><td>Support</td><td><span class="badge badge-amber">Moyen</span></td></tr>
+                    <tr><td>12:20</td><td>Suspension compte</td><td>Admin #03</td><td><span class="badge badge-red">Suspendu</span></td></tr>
+                    <tr><td>12:27</td><td>Commande annulee</td><td>Patient #772</td><td><span class="badge badge-red">Annulee</span></td></tr>
+                    <tr><td>12:31</td><td>Nouveau livreur actif</td><td>Youssef B.</td><td><span class="badge badge-green">Actif</span></td></tr>
+                    <tr><td>12:35</td><td>Rapport exporte</td><td>Admin #01</td><td><span class="badge badge-blue">Info</span></td></tr>
+                    <tr><td>12:40</td><td>Maj statut commande</td><td>System</td><td><span class="badge badge-blue">En cours</span></td></tr>
+                  </tbody>
+                </table>
+              </article>
+
+              <article class="admin-block">
+                <h3>Users Management</h3>
+                <div class="row">
+                  <div class="tabs-row"><span class="tab active">Patients</span><span class="tab">Pharmaciens</span><span class="tab">Livreurs</span></div>
+                  <div class="row right-controls">
+                    <div class="search-box inline"><i data-lucide="search"></i><input value="Recherche" /></div>
+                    <select><option>Actif</option><option>Suspendu</option><option>En attente</option></select>
+                  </div>
+                </div>
+                <table class="table">
+                  <thead><tr><th>ID</th><th>Nom</th><th>Email</th><th>Date inscription</th><th>Statut</th><th>Actions</th></tr></thead>
+                  <tbody>
+                    <tr><td>U-1001</td><td>Marie Lambert</td><td>marie@email.com</td><td>2026-01-12</td><td><span class="badge badge-green">Actif</span></td><td>👁️ ✏️ 🚫 🗑️</td></tr>
+                    <tr><td>U-1002</td><td>Pharmacie Centrale</td><td>pharmacie@centrale.ma</td><td>2025-11-18</td><td><span class="badge badge-amber">En attente</span></td><td>👁️ ✏️ 🚫 🗑️</td></tr>
+                    <tr><td>U-1003</td><td>Youssef Benali</td><td>youssef@courier.ma</td><td>2026-02-05</td><td><span class="badge badge-red">Suspendu</span></td><td>👁️ ✏️ 🚫 🗑️</td></tr>
+                  </tbody>
+                </table>
+                <p class="muted">1-20 sur 1248</p>
+              </article>
+
+              <article class="admin-block">
+                <h3>Orders</h3>
+                <div class="row right-controls">
+                  <input value="01/04 - 16/04" />
+                  <select><option>Status</option><option>En attente</option><option>Validee</option></select>
+                  <input value="Recherche commande" />
+                </div>
+                <table class="table">
+                  <thead><tr><th>ID</th><th>Patient</th><th>Pharmacien</th><th>Livreur</th><th>Produits</th><th>Montant</th><th>Statut</th><th>Date</th><th>Actions</th></tr></thead>
+                  <tbody>
+                    <tr><td>#00124</td><td>Karim A.</td><td>Centrale</td><td>Mohammed D.</td><td>3</td><td>€23.40</td><td><span class="badge badge-blue">En livraison</span></td><td>2026-04-16</td><td>Voir</td></tr>
+                    <tr><td>#00120</td><td>Nadia R.</td><td>Atlas</td><td>Samir K.</td><td>2</td><td>€11.90</td><td><span class="badge badge-green">Livree</span></td><td>2026-04-15</td><td>Voir</td></tr>
+                  </tbody>
+                </table>
+                <div class="modal-mock">
+                  <h4>Order Detail Modal (static)</h4>
+                  <p>Infos completes commande, preview ordonnance, timeline timestamps.</p>
+                </div>
+              </article>
+
+              <article class="admin-block two-col-grid">
+                <div>
+                  <h3>Prescriptions</h3>
+                  <div class="prescription-grid">
+                    <div class="mini-card"><p>Karim A.</p><small>Pharmacien: Centrale</small><span class="badge badge-amber">En attente</span><button class="btn-secondary tiny">Voir</button></div>
+                    <div class="mini-card"><p>Nadia R.</p><small>Pharmacien: Atlas</small><span class="badge badge-green">Validee</span><button class="btn-secondary tiny">Voir</button></div>
+                    <div class="mini-card"><p>Leo M.</p><small>Pharmacien: Gauthier</small><span class="badge badge-red">Refusee</span><button class="btn-secondary tiny">Voir</button></div>
+                  </div>
+                </div>
+                <div>
+                  <h3>Livreur Tracking</h3>
+                  <div class="map-placeholder dots-map">
+                    <span class="dot-map d1"></span><span class="dot-map d2"></span><span class="dot-map d3"></span><span class="dot-map d4"></span><span class="dot-map d5"></span>
+                  </div>
+                  <ul>
+                    <li>Mohammed D. - En livraison - ETA 12 min</li>
+                    <li>Youssef B. - Disponible</li>
+                    <li>Samir K. - En livraison - ETA 19 min</li>
+                  </ul>
+                </div>
+              </article>
+
+              <article class="admin-block two-col-grid">
+                <div class="chart-box">Commandes par jour (bar chart)</div>
+                <div class="chart-box">Repartition par categorie (pie chart)</div>
+                <div class="chart-box">Revenus mensuels (line chart)</div>
+                <div class="chart-box">Performance livreurs (bar chart)</div>
+                <button class="btn-indigo">Telecharger rapport PDF</button>
+              </article>
+
+              <article class="admin-block">
+                <h3>Incidents</h3>
+                <table class="table">
+                  <thead><tr><th>ID</th><th>Type</th><th>Utilisateur</th><th>Description</th><th>Date</th><th>Priorite</th><th>Statut</th><th>Assigne a</th><th>Actions</th></tr></thead>
+                  <tbody>
+                    <tr><td>INC-201</td><td>Retard</td><td>Patient</td><td>Livraison > 45 min</td><td>2026-04-16</td><td><span class="badge badge-red">Urgent</span></td><td><span class="badge badge-amber">Ouvert</span></td><td>Ops-1</td><td>Prendre en charge</td></tr>
+                    <tr><td>INC-202</td><td>Paiement</td><td>Patient</td><td>Paiement refuse</td><td>2026-04-15</td><td><span class="badge badge-amber">Moyen</span></td><td><span class="badge badge-blue">En cours</span></td><td>Ops-2</td><td>Resoudre</td></tr>
+                    <tr><td>INC-203</td><td>Compte</td><td>Livreur</td><td>Doc manquant</td><td>2026-04-14</td><td><span class="badge badge-green">Faible</span></td><td><span class="badge badge-green">Clos</span></td><td>Ops-3</td><td>Archiver</td></tr>
+                  </tbody>
+                </table>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <section class="global-extras">
+          <article class="screen-card">
+            <h3>Empty State Example</h3>
+            <div class="empty-state">
+              <i data-lucide="inbox"></i>
+              <p>Aucune commande pour le moment</p>
+              <button class="btn-primary small">Explorer le catalogue</button>
+            </div>
+          </article>
+          <article class="screen-card">
+            <h3>Loading Skeleton Example</h3>
+            <div class="skeleton s-lg"></div>
+            <div class="skeleton s-md"></div>
+            <div class="skeleton s-sm"></div>
+            <div class="skeleton s-md"></div>
+          </article>
+        </section>
+      </main>
+    </div>
+
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>
