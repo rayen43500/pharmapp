@@ -18,6 +18,8 @@ import {
   View,
 } from 'react-native';
 
+type IconName = keyof typeof MaterialCommunityIcons.glyphMap;
+
 type Role = 'patient' | 'pharmacien' | 'livreur' | 'admin';
 type AuthStep = 'role' | 'login' | 'register';
 type StatusType = 'success' | 'warning' | 'error';
@@ -87,7 +89,7 @@ type PersistedState = {
 type NavTab = {
   key: string;
   label: string;
-  icon: string;
+  icon: IconName;
 };
 
 type NotificationItem = {
@@ -252,32 +254,32 @@ const ROLE_LABELS: Record<Role, string> = {
 };
 
 const PATIENT_TABS: NavTab[] = [
-  { key: 'home', label: 'Home', icon: 'H' },
-  { key: 'search', label: 'Search', icon: 'Q' },
-  { key: 'cart', label: 'Cart', icon: 'C' },
-  { key: 'orders', label: 'Orders', icon: 'O' },
-  { key: 'profile', label: 'Profile', icon: 'P' },
+  { key: 'home', label: 'Home', icon: 'home-variant-outline' },
+  { key: 'search', label: 'Search', icon: 'magnify' },
+  { key: 'cart', label: 'Cart', icon: 'cart-outline' },
+  { key: 'orders', label: 'Orders', icon: 'clipboard-text-outline' },
+  { key: 'profile', label: 'Profile', icon: 'account-circle-outline' },
 ];
 
 const PHARMACIEN_TABS: NavTab[] = [
-  { key: 'dashboard', label: 'Dashboard', icon: 'D' },
-  { key: 'commandes', label: 'Commandes', icon: 'C' },
-  { key: 'stock', label: 'Stock', icon: 'S' },
-  { key: 'profile', label: 'Profile', icon: 'P' },
+  { key: 'dashboard', label: 'Dashboard', icon: 'view-dashboard-outline' },
+  { key: 'commandes', label: 'Commandes', icon: 'clipboard-list-outline' },
+  { key: 'stock', label: 'Stock', icon: 'pill-multiple' },
+  { key: 'profile', label: 'Profile', icon: 'account-circle-outline' },
 ];
 
 const LIVREUR_TABS: NavTab[] = [
-  { key: 'dashboard', label: 'Dashboard', icon: 'D' },
-  { key: 'livraisons', label: 'Livraisons', icon: 'L' },
-  { key: 'navigation', label: 'Navigation', icon: 'N' },
-  { key: 'profile', label: 'Profile', icon: 'P' },
+  { key: 'dashboard', label: 'Dashboard', icon: 'view-dashboard-outline' },
+  { key: 'livraisons', label: 'Livraisons', icon: 'bike-fast' },
+  { key: 'navigation', label: 'Navigation', icon: 'map-marker-path' },
+  { key: 'profile', label: 'Profile', icon: 'account-circle-outline' },
 ];
 
 const ADMIN_TABS: NavTab[] = [
-  { key: 'dashboard', label: 'Dashboard', icon: 'D' },
-  { key: 'users', label: 'Users', icon: 'U' },
-  { key: 'commandes', label: 'Commandes', icon: 'C' },
-  { key: 'reports', label: 'Reports', icon: 'R' },
+  { key: 'dashboard', label: 'Dashboard', icon: 'view-dashboard-outline' },
+  { key: 'users', label: 'Users', icon: 'account-group-outline' },
+  { key: 'commandes', label: 'Commandes', icon: 'clipboard-list-outline' },
+  { key: 'reports', label: 'Reports', icon: 'file-chart-outline' },
 ];
 
 function wait(ms: number): Promise<void> {
@@ -325,7 +327,7 @@ function InputField(props: {
 function SearchBar(props: { value: string; onChangeText: (v: string) => void; placeholder: string }) {
   return (
     <View style={styles.searchBarWrap}>
-      <Text style={styles.searchIcon}>Q</Text>
+      <MaterialCommunityIcons name="magnify" size={18} color="#9CA3AF" style={styles.searchIcon} />
       <TextInput
         value={props.value}
         onChangeText={props.onChangeText}
@@ -1159,7 +1161,7 @@ export default function App() {
       <View style={styles.topRightIcons}>
         {user?.role === 'patient' && (
           <Pressable style={styles.topIconCircle} onPress={() => setPatientTab('cart')}>
-            <Text style={styles.topIconText}>C</Text>
+            <MaterialCommunityIcons name="cart-outline" size={15} color={TOKENS.secondary} />
             <View style={styles.topCountBadge}><Text style={styles.topCountText}>{cart.reduce((sum, item) => sum + item.qty, 0)}</Text></View>
           </Pressable>
         )}
@@ -1228,7 +1230,11 @@ export default function App() {
       {selectedTabs.map((tab) => (
         <Pressable key={tab.key} style={styles.bottomItem} onPress={() => setActiveTab(tab.key)}>
           <View style={[styles.bottomIcon, activeTab === tab.key && styles.bottomIconActive]}>
-            <Text style={[styles.bottomIconText, activeTab === tab.key && styles.bottomIconTextActive]}>{tab.icon}</Text>
+            <MaterialCommunityIcons
+              name={tab.icon}
+              size={17}
+              color={activeTab === tab.key ? TOKENS.primary : '#9CA3AF'}
+            />
           </View>
           <Text style={[styles.bottomLabel, activeTab === tab.key && styles.bottomLabelActive]}>{tab.label}</Text>
         </Pressable>
