@@ -508,9 +508,13 @@ export default function App() {
     'RGPD: journalisation active',
     'Securite: acces admin strictement controle',
   ]);
-  const [incidents, setIncidents] = useState<Array<{ id: string; title: string; status: 'Ouvert' | 'Resolue' }>>([
-    { id: 'INC-11', title: 'Retard livraison zone nord', status: 'Ouvert' },
-    { id: 'INC-12', title: 'Ordonnance illisible', status: 'Ouvert' },
+  const [incidents, setIncidents] = useState<
+    Array<{ id: string; title: string; status: 'Ouvert' | 'Resolue'; priority: 'Urgent' | 'Moyen' | 'Faible' }>
+  >([
+    { id: 'INC-11', title: 'Retard livraison zone nord', status: 'Ouvert', priority: 'Urgent' },
+    { id: 'INC-12', title: 'Ordonnance illisible', status: 'Ouvert', priority: 'Moyen' },
+    { id: 'INC-13', title: 'Erreur adresse patient', status: 'Resolue', priority: 'Faible' },
+    { id: 'INC-14', title: 'Ecart stock antibiotique', status: 'Ouvert', priority: 'Urgent' },
   ]);
 
   const [chatOpen, setChatOpen] = useState(false);
@@ -2303,6 +2307,26 @@ export default function App() {
     if (adminTab === 'dashboard') {
       const openIncidents = incidents.filter((i) => i.status === 'Ouvert').length;
       const pendingOrders = orders.filter((o) => o.status === 'En attente' || o.status === 'Validee').length;
+      const weeklyOrders = [18, 22, 16, 27, 24, 31, 29];
+      const weeklyLabels = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+      const maxWeeklyOrders = Math.max(...weeklyOrders, 1);
+      const priorityWeight: Record<'Urgent' | 'Moyen' | 'Faible', number> = {
+        Urgent: 3,
+        Moyen: 2,
+        Faible: 1,
+      };
+      const topIncidents = [...incidents]
+        .sort((a, b) => {
+          const rank = priorityWeight[b.priority] - priorityWeight[a.priority];
+          if (rank !== 0) {
+            return rank;
+          }
+          if (a.status !== b.status) {
+            return a.status === 'Ouvert' ? -1 : 1;
+          }
+          return a.id.localeCompare(b.id);
+        })
+        .slice(0, 5);
 
       return (
         <>
@@ -2335,7 +2359,53 @@ export default function App() {
             <View style={styles.rowWrap}>
               <AppButton title="Voir incidents" onPress={() => setAdminTab('reports')} variant="secondary" full={false} />
               <AppButton title="Ouvrir notifications" onPress={() => setNotificationsOpen(true)} full={false} />
+              <AppButton
+                title="Exporter PDF (mock)"
+                onPress={() => pushNotif('Export PDF dashboard genere (mock)')}
+                variant="secondary"
+                full={false}
+              />
             </View>
+          </View>
+
+          <View style={styles.adminOpsCard}>
+            <View style={styles.sectionHeaderLeft}>
+              <MaterialCommunityIcons name="chart-box-outline" size={18} color={TOKENS.secondary} />
+              <Text style={styles.h2}>Commandes par jour (7 jours)</Text>
+            </View>
+            <View style={styles.adminMiniChartWrap}>
+              {weeklyOrders.map((value, index) => (
+                <View key={`${weeklyLabels[index]}-${value}`} style={styles.adminMiniBarCol}>
+                  <View style={[styles.adminMiniBar, { height: Math.max(22, (value / maxWeeklyOrders) * 86) }]} />
+                  <Text style={styles.adminMiniBarValue}>{value}</Text>
+                  <Text style={styles.adminMiniBarLabel}>{weeklyLabels[index]}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+
+          <View style={styles.adminOpsCard}>
+            <View style={styles.sectionHeaderLeft}>
+              <MaterialCommunityIcons name="alert-circle-outline" size={18} color={TOKENS.secondary} />
+              <Text style={styles.h2}>Top incidents</Text>
+            </View>
+            <View style={styles.adminTableHeader}>
+              <Text style={[styles.caption, styles.adminTableColId]}>ID</Text>
+              <Text style={[styles.caption, styles.adminTableColTitle]}>Incident</Text>
+              <Text style={[styles.caption, styles.adminTableColPriority]}>Priorite</Text>
+              <Text style={[styles.caption, styles.adminTableColStatus]}>Statut</Text>
+            </View>
+            {topIncidents.map((incident) => (
+              <View key={incident.id} style={styles.adminTableRow}>
+                <Text style={[styles.body, styles.adminTableColId]}>{incident.id}</Text>
+                <Text style={[styles.body, styles.adminTableColTitle]} numberOfLines={1}>{incident.title}</Text>
+                <StatusBadge
+                  label={incident.priority}
+                  type={incident.priority === 'Urgent' ? 'error' : incident.priority === 'Moyen' ? 'warning' : 'info'}
+                />
+                <StatusBadge label={incident.status} type={incident.status === 'Ouvert' ? 'warning' : 'success'} />
+              </View>
+            ))}
           </View>
 
           <View style={styles.pharmacyComplianceCard}>
@@ -2355,32 +2425,95 @@ export default function App() {
     if (adminTab === 'users') {
       return (
         <View style={styles.card}>
-          <Text style={styles.h2}>Gestion utilisateurs</Text>
-          <View style={styles.rowWrap}>
+          <View style={styles.sectionHeaderRow}>
+            <View style={styles.sectionHeaderLeft}>
+              <MaterialCommunityIcons name="account-group-outline" size={18} color={TOKENS.secondary} />
+              <Text style={styles.h2}>Gestion utilisateurs</Text>
+            </View>
+            <StatusBadge label={`${ADMIN_USERS.length} comptes`} type="info" />
+          </View>
+          <Text style={styles.adminUsersSubtitle}>Pilotage centralise des patients, pharmaciens et livreurs.</Text>
+
+          <View style={styles.adminUsersActions}>
             <AppButton title="Creer" onPress={() => pushNotif('Creation utilisateur (fake)')} full={false} />
             <AppButton title="Modifier" onPress={() => pushNotif('Modification utilisateur (fake)')} variant="secondary" full={false} />
           </View>
-          <View style={styles.rowWrap}>
+
+          <View style={styles.adminUsersActions}>
             <StatusBadge label="Patients" type="success" />
             <StatusBadge label="Pharmaciens" type="warning" />
             <StatusBadge label="Livreurs" type="error" />
           </View>
+
           {ADMIN_USERS.map((u) => (
-            <View key={u.id} style={styles.orderCard}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.orderTitle}>{u.name}</Text>
-                <Text style={styles.caption}>{u.role}</Text>
+            <View key={u.id} style={styles.adminUserCard}>
+              <View style={styles.adminUserTop}>
+                <View style={styles.adminUserIdentity}>
+                  <View style={styles.adminUserAvatar}>
+                    <Text style={styles.adminUserAvatarText}>{u.name.slice(0, 2).toUpperCase()}</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.orderTitle}>{u.name}</Text>
+                    <Text style={styles.adminUserMeta}>{u.role}</Text>
+                  </View>
+                </View>
+                <View
+                  style={[
+                    styles.adminRolePill,
+                    u.role === 'patient'
+                      ? styles.adminRolePillPatient
+                      : u.role === 'pharmacien'
+                        ? styles.adminRolePillPharmacien
+                        : styles.adminRolePillLivreur,
+                  ]}
+                >
+                  <Text style={styles.adminRolePillText}>{u.role}</Text>
+                </View>
+              </View>
+
+              <View style={styles.rowWrap}>
                 <StatusBadge label={u.status} type={u.status === 'Actif' ? 'success' : 'warning'} />
               </View>
-              <AppButton title="Suspendre" onPress={() => pushNotif(`Suspendu ${u.name}`)} variant="danger" full={false} />
-              <AppButton title="Supprimer" onPress={() => pushNotif(`Supprime ${u.name}`)} variant="secondary" full={false} />
-              <AppButton title="Detail" onPress={() => setSelectedAdminUserId(u.id)} full={false} />
+
+              <View style={styles.adminUserActionsRow}>
+                <Pressable
+                  style={[styles.adminUserAction, styles.adminUserActionDanger]}
+                  onPress={() => pushNotif(`Suspendu ${u.name}`)}
+                >
+                  <MaterialCommunityIcons name="pause-circle-outline" size={14} color="#991B1B" />
+                  <Text style={[styles.adminUserActionText, styles.adminUserActionTextDanger]}>Suspendre</Text>
+                </Pressable>
+
+                <Pressable
+                  style={[styles.adminUserAction, styles.adminUserActionNeutral]}
+                  onPress={() => pushNotif(`Supprime ${u.name}`)}
+                >
+                  <MaterialCommunityIcons name="trash-can-outline" size={14} color="#334155" />
+                  <Text style={[styles.adminUserActionText, styles.adminUserActionTextNeutral]}>Supprimer</Text>
+                </Pressable>
+
+                <Pressable
+                  style={[styles.adminUserAction, styles.adminUserActionPrimary]}
+                  onPress={() => setSelectedAdminUserId(u.id)}
+                >
+                  <MaterialCommunityIcons name="file-document-outline" size={14} color="#155E75" />
+                  <Text style={[styles.adminUserActionText, styles.adminUserActionTextPrimary]}>Detail</Text>
+                </Pressable>
+              </View>
             </View>
           ))}
 
           {selectedAdminUser && (
-            <View style={styles.detailPanel}>
-              <Text style={styles.h2}>Detail utilisateur</Text>
+            <View style={styles.adminDetailPanel}>
+              <View style={styles.sectionHeaderRow}>
+                <View style={styles.sectionHeaderLeft}>
+                  <MaterialCommunityIcons name="account-details-outline" size={18} color={TOKENS.secondary} />
+                  <Text style={styles.h2}>Detail utilisateur</Text>
+                </View>
+                <Pressable onPress={() => setSelectedAdminUserId(null)} style={styles.adminCloseDetailBtn}>
+                  <Text style={styles.adminCloseDetailBtnText}>Fermer</Text>
+                </Pressable>
+              </View>
               <Text style={styles.body}>Nom: {selectedAdminUser.name}</Text>
               <Text style={styles.body}>Role: {selectedAdminUser.role}</Text>
               <Text style={styles.body}>Statut: {selectedAdminUser.status}</Text>
@@ -2409,38 +2542,110 @@ export default function App() {
     }
 
     if (adminTab === 'commandes') {
+      const activeOrders = orders.filter((o) => o.status === 'En attente' || o.status === 'Validee' || o.status === 'En livraison');
+      const deliveredOrders = orders.filter((o) => o.status === 'Livree');
+      const canceledOrders = orders.filter((o) => o.status === 'Annulee');
+
       return (
         <View style={styles.card}>
-          <Text style={styles.h2}>Gestion commandes</Text>
-          <Text style={styles.caption}>En cours</Text>
-          {orders.filter((o) => o.status === 'En attente' || o.status === 'Validee' || o.status === 'En livraison').map((o) => (
-            <View key={`${o.id}-ongoing`} style={styles.orderCard}>
-              <Text style={styles.orderTitle}>{o.id}</Text>
-              <StatusBadge label={o.status} type={badgeType(o.status)} />
+          <View style={styles.sectionHeaderRow}>
+            <View style={styles.sectionHeaderLeft}>
+              <MaterialCommunityIcons name="clipboard-list-outline" size={18} color={TOKENS.secondary} />
+              <Text style={styles.h2}>Gestion commandes</Text>
             </View>
-          ))}
+            <StatusBadge label={`${orders.length} commandes`} type="info" />
+          </View>
 
-          <Text style={styles.caption}>Livrees</Text>
-          {orders.filter((o) => o.status === 'Livree').map((o) => (
-            <View key={`${o.id}-done`} style={styles.orderCard}>
-              <Text style={styles.orderTitle}>{o.id}</Text>
-              <StatusBadge label={o.status} type="success" />
+          <View style={styles.adminOrdersSection}>
+            <View style={styles.adminOrdersSectionHeader}>
+              <Text style={styles.caption}>En cours</Text>
+              <StatusBadge label={`${activeOrders.length}`} type="warning" />
             </View>
-          ))}
+            {activeOrders.length === 0 ? (
+              <Text style={styles.caption}>Aucune commande en cours.</Text>
+            ) : (
+              activeOrders.map((o) => (
+                <View key={`${o.id}-ongoing`} style={styles.adminOrderItem}>
+                  <View style={styles.adminOrderTop}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.orderTitle}>{o.id}</Text>
+                      <Text style={styles.adminUserMeta}>{o.patientName}</Text>
+                    </View>
+                    <StatusBadge label={o.status} type={badgeType(o.status)} />
+                  </View>
+                  <View style={styles.rowWrap}>
+                    <StatusBadge label={`ETA ${o.eta}`} type="info" />
+                    <StatusBadge label={o.distance} type="info" />
+                    <StatusBadge label={o.courierName ?? 'Livreur non assigne'} type="info" />
+                  </View>
+                </View>
+              ))
+            )}
+          </View>
 
-          <Text style={styles.caption}>Annulees</Text>
-          {orders.filter((o) => o.status === 'Annulee').map((o) => (
-            <View key={`${o.id}-cancel`} style={styles.orderCard}>
-              <Text style={styles.orderTitle}>{o.id}</Text>
-              <StatusBadge label={o.status} type="error" />
+          <View style={styles.adminOrdersSection}>
+            <View style={styles.adminOrdersSectionHeader}>
+              <Text style={styles.caption}>Livrees</Text>
+              <StatusBadge label={`${deliveredOrders.length}`} type="success" />
             </View>
-          ))}
+            {deliveredOrders.length === 0 ? (
+              <Text style={styles.caption}>Aucune commande livree.</Text>
+            ) : (
+              deliveredOrders.map((o) => (
+                <View key={`${o.id}-done`} style={styles.adminOrderItem}>
+                  <View style={styles.adminOrderTop}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.orderTitle}>{o.id}</Text>
+                      <Text style={styles.adminUserMeta}>{o.patientName}</Text>
+                    </View>
+                    <StatusBadge label={o.status} type="success" />
+                  </View>
+                  <View style={styles.rowWrap}>
+                    <StatusBadge label={`Livraison ${o.eta}`} type="info" />
+                    <StatusBadge label={o.courierName ?? 'Livreur non assigne'} type="info" />
+                  </View>
+                </View>
+              ))
+            )}
+          </View>
 
-          <View style={styles.detailPanel}>
-            <Text style={styles.caption}>Suivi livreurs en temps reel</Text>
+          <View style={styles.adminOrdersSection}>
+            <View style={styles.adminOrdersSectionHeader}>
+              <Text style={styles.caption}>Annulees</Text>
+              <StatusBadge label={`${canceledOrders.length}`} type="error" />
+            </View>
+            {canceledOrders.length === 0 ? (
+              <Text style={styles.caption}>Aucune commande annulee.</Text>
+            ) : (
+              canceledOrders.map((o) => (
+                <View key={`${o.id}-cancel`} style={styles.adminOrderItem}>
+                  <View style={styles.adminOrderTop}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.orderTitle}>{o.id}</Text>
+                      <Text style={styles.adminUserMeta}>{o.patientName}</Text>
+                    </View>
+                    <StatusBadge label={o.status} type="error" />
+                  </View>
+                  <View style={styles.rowWrap}>
+                    <StatusBadge label={o.distance} type="info" />
+                    <StatusBadge label={o.courierName ?? 'Livreur non assigne'} type="info" />
+                  </View>
+                </View>
+              ))
+            )}
+          </View>
+
+          <View style={styles.adminCourierPanel}>
+            <View style={styles.sectionHeaderLeft}>
+              <MaterialCommunityIcons name="bike-fast" size={18} color={TOKENS.secondary} />
+              <Text style={styles.caption}>Suivi livreurs en temps reel</Text>
+            </View>
             {COURIERS.map((courier) => (
-              <View key={courier.name} style={styles.checkRow}>
-                <Text style={styles.body}>{courier.name}</Text>
+              <View key={courier.name} style={styles.adminCourierRow}>
+                <View style={styles.adminCourierIdentity}>
+                  <MaterialCommunityIcons name="account-circle-outline" size={18} color={TOKENS.secondary} />
+                  <Text style={styles.body}>{courier.name}</Text>
+                </View>
                 <StatusBadge
                   label={`${courier.status} - ${courier.distanceKm.toFixed(1)} km`}
                   type={courier.status === 'Disponible' ? 'success' : courier.status === 'En mission' ? 'warning' : 'error'}
@@ -2452,39 +2657,80 @@ export default function App() {
       );
     }
 
+    const priorityWeight: Record<'Urgent' | 'Moyen' | 'Faible', number> = {
+      Urgent: 3,
+      Moyen: 2,
+      Faible: 1,
+    };
+    const sortedIncidents = [...incidents].sort((a, b) => {
+      const rank = priorityWeight[b.priority] - priorityWeight[a.priority];
+      if (rank !== 0) {
+        return rank;
+      }
+      if (a.status !== b.status) {
+        return a.status === 'Ouvert' ? -1 : 1;
+      }
+      return a.id.localeCompare(b.id);
+    });
+    const openReportsIncidents = incidents.filter((incident) => incident.status === 'Ouvert').length;
+
     return (
       <View style={styles.card}>
-        <Text style={styles.h2}>Reports</Text>
-        <View style={styles.chartWrap}>
-          <View style={[styles.chartBar, { height: 64 }]} />
-          <View style={[styles.chartBar, { height: 92 }]} />
-          <View style={[styles.chartBar, { height: 78 }]} />
-          <View style={[styles.chartBar, { height: 108 }]} />
+        <View style={styles.sectionHeaderRow}>
+          <View style={styles.sectionHeaderLeft}>
+            <MaterialCommunityIcons name="file-chart-outline" size={18} color={TOKENS.secondary} />
+            <Text style={styles.h2}>Reports</Text>
+          </View>
+          <StatusBadge label={`${openReportsIncidents} ouverts`} type={openReportsIncidents > 0 ? 'warning' : 'success'} />
         </View>
-        <View style={styles.detailPanel}>
-          <Text style={styles.caption}>Audit RGPD et tracabilite</Text>
-          {auditLogs.map((log) => (
-            <Text key={log} style={styles.body}>- {log}</Text>
-          ))}
+
+        <View style={styles.adminOpsCard}>
+          <View style={styles.sectionHeaderLeft}>
+            <MaterialCommunityIcons name="shield-search-outline" size={18} color={TOKENS.secondary} />
+            <Text style={styles.caption}>Audit RGPD et tracabilite</Text>
+          </View>
+          {auditLogs.length === 0 ? (
+            <Text style={styles.caption}>Aucun evenement d'audit.</Text>
+          ) : (
+            auditLogs.map((log) => (
+              <View key={log} style={styles.reportLogRow}>
+                <MaterialCommunityIcons name="clock-time-four-outline" size={15} color={TOKENS.secondary} />
+                <Text style={styles.reportLogText}>{log}</Text>
+              </View>
+            ))
+          )}
         </View>
-        <View style={styles.detailPanel}>
-          <Text style={styles.caption}>Incidents / Litiges</Text>
-          {incidents.map((incident) => (
-            <View key={incident.id} style={styles.orderCard}>
-              <Text style={styles.orderTitle}>{incident.id} - {incident.title}</Text>
-              <StatusBadge label={incident.status} type={incident.status === 'Resolue' ? 'success' : 'warning'} />
-              {incident.status === 'Ouvert' && (
-                <AppButton
-                  title="Resoudre"
-                  full={false}
-                  onPress={() => {
-                    setIncidents((prev) =>
-                      prev.map((it) => (it.id === incident.id ? { ...it, status: 'Resolue' } : it))
-                    );
-                    pushAudit(`Incident ${incident.id} resolu par admin`);
-                  }}
+
+        <View style={styles.adminOpsCard}>
+          <View style={styles.sectionHeaderLeft}>
+            <MaterialCommunityIcons name="alert-circle-outline" size={18} color={TOKENS.secondary} />
+            <Text style={styles.caption}>Incidents / Litiges</Text>
+          </View>
+          {sortedIncidents.map((incident) => (
+            <View key={incident.id} style={styles.reportIncidentRow}>
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text style={styles.orderTitle}>{incident.id} - {incident.title}</Text>
+                <Text style={styles.caption}>Priorite: {incident.priority}</Text>
+              </View>
+              <View style={styles.reportIncidentActions}>
+                <StatusBadge
+                  label={incident.priority}
+                  type={incident.priority === 'Urgent' ? 'error' : incident.priority === 'Moyen' ? 'warning' : 'info'}
                 />
-              )}
+                <StatusBadge label={incident.status} type={incident.status === 'Resolue' ? 'success' : 'warning'} />
+                {incident.status === 'Ouvert' && (
+                  <AppButton
+                    title="Resoudre"
+                    full={false}
+                    onPress={() => {
+                      setIncidents((prev) =>
+                        prev.map((it) => (it.id === incident.id ? { ...it, status: 'Resolue' } : it))
+                      );
+                      pushAudit(`Incident ${incident.id} resolu par admin`);
+                    }}
+                  />
+                )}
+              </View>
             </View>
           ))}
         </View>
@@ -4020,6 +4266,287 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9FCFF',
     padding: 12,
     gap: 8,
+  },
+  adminUsersSubtitle: {
+    color: '#64748B',
+    fontSize: 13,
+    marginTop: 4,
+  },
+  adminUsersActions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 6,
+  },
+  adminUserCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#DCE6F1',
+    padding: 12,
+    gap: 10,
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 1,
+  },
+  adminUserTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  adminUserIdentity: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1,
+  },
+  adminUserAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#CDE3FF',
+    backgroundColor: '#EAF3FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  adminUserAvatarText: {
+    color: TOKENS.secondary,
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  adminUserMeta: {
+    color: '#64748B',
+    fontSize: 13,
+    textTransform: 'capitalize',
+  },
+  adminRolePill: {
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderWidth: 1,
+  },
+  adminRolePillPatient: {
+    backgroundColor: '#E8F8EE',
+    borderColor: '#97D6AE',
+  },
+  adminRolePillPharmacien: {
+    backgroundColor: '#FFF8E8',
+    borderColor: '#F7D38D',
+  },
+  adminRolePillLivreur: {
+    backgroundColor: '#FEEDEE',
+    borderColor: '#F5B6BB',
+  },
+  adminRolePillText: {
+    color: TOKENS.text,
+    fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'capitalize',
+  },
+  adminUserActionsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  adminUserAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  adminUserActionDanger: {
+    borderColor: '#F2B9BE',
+    backgroundColor: '#FFF1F2',
+  },
+  adminUserActionNeutral: {
+    borderColor: '#D4DEE9',
+    backgroundColor: '#F8FAFC',
+  },
+  adminUserActionPrimary: {
+    borderColor: '#BDE1EA',
+    backgroundColor: '#ECF9FD',
+  },
+  adminUserActionText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  adminUserActionTextDanger: {
+    color: '#991B1B',
+  },
+  adminUserActionTextNeutral: {
+    color: '#334155',
+  },
+  adminUserActionTextPrimary: {
+    color: '#155E75',
+  },
+  adminDetailPanel: {
+    borderWidth: 1,
+    borderColor: '#CFE0F5',
+    borderRadius: 16,
+    backgroundColor: '#F7FBFF',
+    padding: 12,
+    gap: 8,
+    marginTop: 2,
+  },
+  adminCloseDetailBtn: {
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    backgroundColor: '#FFFFFF',
+  },
+  adminCloseDetailBtnText: {
+    color: '#475569',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  adminOrdersSection: {
+    borderWidth: 1,
+    borderColor: '#D9E4F1',
+    borderRadius: 14,
+    backgroundColor: '#F9FCFF',
+    padding: 10,
+    gap: 8,
+  },
+  adminOrdersSectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  adminOrderItem: {
+    borderWidth: 1,
+    borderColor: '#D7E3F1',
+    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    padding: 10,
+    gap: 8,
+  },
+  adminOrderTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 8,
+  },
+  adminCourierPanel: {
+    borderWidth: 1,
+    borderColor: '#D2E0EE',
+    borderRadius: 14,
+    backgroundColor: '#F6FAFF',
+    padding: 12,
+    gap: 8,
+  },
+  adminCourierRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: TOKENS.border,
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 9,
+    gap: 8,
+  },
+  adminCourierIdentity: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flex: 1,
+  },
+  reportLogRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    borderWidth: 1,
+    borderColor: '#DBE5F0',
+    borderRadius: 10,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  reportLogText: {
+    color: TOKENS.text,
+    fontSize: 14,
+    flex: 1,
+  },
+  reportIncidentRow: {
+    borderWidth: 1,
+    borderColor: '#D6E2EF',
+    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    padding: 10,
+    gap: 8,
+  },
+  reportIncidentActions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 8,
+  },
+  adminMiniChartWrap: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    gap: 8,
+    minHeight: 122,
+    marginTop: 2,
+  },
+  adminMiniBarCol: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 4,
+  },
+  adminMiniBar: {
+    width: '100%',
+    maxWidth: 28,
+    borderRadius: 8,
+    backgroundColor: TOKENS.secondary,
+  },
+  adminMiniBarValue: {
+    color: TOKENS.text,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  adminMiniBarLabel: {
+    color: TOKENS.textMuted,
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  adminTableHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#D8E4F0',
+    paddingBottom: 6,
+  },
+  adminTableRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E6EDF4',
+    paddingVertical: 8,
+  },
+  adminTableColId: {
+    width: 62,
+  },
+  adminTableColTitle: {
+    flex: 1,
+  },
+  adminTableColPriority: {
+    width: 86,
+  },
+  adminTableColStatus: {
+    width: 78,
   },
   appDesktop: {
     flex: 1,
