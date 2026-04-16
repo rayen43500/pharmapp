@@ -93,15 +93,17 @@ const STORAGE_KEY = 'medimirville_ui_charter_v1';
 const DEMO_ALL_FEATURES_ENABLED = true;
 
 const TOKENS = {
-  primary: '#0F9D8F',
-  secondary: '#0F6CBD',
-  background: '#EEF3F8',
-  text: '#1B2430',
-  border: '#D5DEE8',
+  primary: '#06B6D4',
+  secondary: '#0891B2',
+  background: '#F0F9FF',
+  text: '#0F172A',
+  border: '#CBD5E1',
   white: '#FFFFFF',
-  success: '#1E9E5A',
-  warning: '#E9A23B',
-  error: '#D64545',
+  success: '#10B981',
+  warning: '#F59E0B',
+  error: '#EF4444',
+  lightBg: '#F8FAFC',
+  accent: '#8B5CF6',
 };
 
 const PRODUCTS: Product[] = [
@@ -1906,7 +1908,7 @@ export default function App() {
 const styles = StyleSheet.create({
   splashScreen: {
     flex: 1,
-    backgroundColor: '#10233A',
+    backgroundColor: '#0F172A',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -1973,16 +1975,16 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: TOKENS.white,
-    borderRadius: 22,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#D9E2EC',
-    padding: 16,
+    borderColor: '#E2E8F0',
+    padding: 20,
     gap: 14,
     shadowColor: '#000000',
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 3,
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
   },
   h1: {
     color: TOKENS.text,
@@ -2068,16 +2070,16 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   button: {
-    height: 52,
-    borderRadius: 14,
+    height: 48,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: TOKENS.primary,
-    paddingHorizontal: 18,
-    shadowColor: '#0E766B',
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 5 },
+    paddingHorizontal: 20,
+    shadowColor: '#06B6D4',
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
     elevation: 2,
   },
   buttonFull: {
